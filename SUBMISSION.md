@@ -6,34 +6,30 @@ video recorded today, and a short project description.
 
 ## 1. Atlas (required for the finals)
 
-The project runs today against a local copy of `sample_mflix`; the finals require the
-same thing on MongoDB Atlas. Three steps, in this order.
+The submission runs on **Cluster0** (`cluster0.te8e8r.mongodb.net`, MongoDB 8.0.34) in
+the hackathon sandbox project, organised as: dataset in `sample_mflix`, ledger in
+`harness`, vector index `lessons_vec` over `harness.lessons.embedding`.
 
-1. **Accept the sandbox invite** from MongoDB / Cerebral Valley and open Atlas.
-   If it offers to create the cluster instead of handing one over:
-   *Build a Database* → **M0 Free (Shared)** → region near San Francisco.
-2. **Database Access** → add a database user (role `Atlas admin`). Generate the
-   password and keep it; avoid `@`, `:` and `/` in it.
-   **Network Access** → add the address `157.180.49.112` (the machine that loads the
-   data), plus your own address if you will run it from the laptop.
-3. **Connect → Drivers** → copy the `mongodb+srv://...` string into
-   `/root/.secrets/atlas_uri` on that machine, then:
+What was done, and what to repeat on another cluster:
+
+1. **Database user** with `Atlas admin`, and the machine that loads the data added to
+   **Network Access** (the loading host is `157.180.49.112`).
+2. **Load and prepare**, from the machine allowed above:
 
 ```bash
 export MONGODB_URI="$(cat /root/.secrets/atlas_uri)"
 bash scripts/restore_to_atlas.sh
-```
-
-That restores the dataset, creates the harness collections, its indexes and the
-Atlas Vector Search index over the memory of past failures, and prints what the
-cluster now holds. Nothing is ever echoed back.
-
-Then measure the same numbers on Atlas:
-
-```bash
+.venv/bin/python scripts/ensure_dataset_indexes.py
 .venv/bin/python -m mh.cli init
 .venv/bin/python -m mh.cli run
 ```
+
+`restore_to_atlas.sh` restores the dataset, creates the ledger collections, their MQL
+indexes and the `lessons_vec` Vector Search index, and prints what the cluster holds.
+`ensure_dataset_indexes.py` is required: the Atlas dump ships without the
+`comments.movie_id` index, so the eight join questions time out before their reference
+answers can be computed. Verified on the cluster: 21,349 movies, 41,079 comments,
+1,564 theaters, 3,483 embedded movies; `$vectorSearch` answers on `lessons_vec`.
 
 ## 2. Public repository
 
@@ -51,13 +47,16 @@ Record on site, today, with sound. Screen plus voice is enough. Suggested shots:
 
 | time | what is on screen | what to say |
 |---|---|---|
-| 0:00–0:10 | `python -m mh.cli status` — the current version document | a harness version is a document in MongoDB; everything it can change about itself lives there |
-| 0:10–0:25 | `python -m mh.cli run` — the selection and verification numbers | it answers 57 plain-language questions about sample_mflix and is scored on returned rows, never on query text |
-| 0:25–0:45 | `python -m mh.cli edits` — the ledger, scrolling to the refusals | it proposed changes to itself; the gate refused the ones that widened its power or that only helped on the data the search could see |
-| 0:45–0:55 | `python -m mh.cli rollback` | every promotion is reversible, and the reason for each decision is in the ledger |
-| 0:55–1:00 | `python -m mh.cli status` again | the harness is the same data it always was: auditable, diffable, reversible |
+| 0:00–0:10 | Atlas UI → **Browse Collections** → `harness.versions` | a version of this harness is a document in MongoDB; everything it can change about itself lives in that document |
+| 0:10–0:20 | `python -m mh.cli run` on the cluster | it answers 57 plain-language questions about sample_mflix and is scored on the rows it returns, never on the text of the query |
+| 0:20–0:35 | `python -m mh.cli edits` — the ledger, down to the refusals | it proposed five changes to itself; the gate refused all five, and each refusal carries its numbers |
+| 0:35–0:50 | `bash demo/gate_proof.sh` — the crippled run | with the aggregation tool revoked the harness falls to 19%, 47 questions refused; it asks for the tool back and the envelope says no; a human grants it, not the harness |
+| 0:50–0:58 | Atlas UI → **Search & Vector Search** → `lessons_vec` | it remembers its own past failures through a vector index on the cluster |
+| 0:58–1:00 | `python -m mh.cli rollback` | every promotion is reversible with one command |
 
-The ledger commands read MongoDB, so they are instant and safe to run live.
+The ledger commands read MongoDB, so they are instant and safe to run live. The two
+guards in the fourth shot are the reason the rest is worth believing: no language
+model decides those outcomes.
 
 ## 4. Description (paste into the submission form)
 

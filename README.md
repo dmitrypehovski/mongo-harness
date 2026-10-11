@@ -117,8 +117,19 @@ Against Atlas:
 
 ```bash
 export MONGODB_URI='mongodb+srv://...'
-bash scripts/restore_to_atlas.sh         # dataset, harness schema and vector index
+bash scripts/restore_to_atlas.sh          # the dataset, the harness schema, the vector index
+.venv/bin/python scripts/ensure_dataset_indexes.py   # the join key the questions need
+.venv/bin/python -m mh.cli init
+.venv/bin/python -m mh.cli run
 ```
+
+`restore_to_atlas.sh` loads the official sample dump, creates the ledger collections,
+their MQL indexes and the `lessons_vec` Atlas Vector Search index. The second step is
+not optional: the Atlas dump arrives with nothing but the default indexes, so the
+eight questions that join `comments` with `movies` on `comments.movie_id` scan the
+whole collection and hit the server-side time limit before the reference answers can
+even be computed. The first time this ran against Atlas, that is exactly what
+happened, and it is the kind of failure that only shows up on the real cluster.
 
 ## Results
 
@@ -155,6 +166,20 @@ overfitting, and it looks like the best idea in the table until the second colum
 is read. The retrieval strategy — put the most similar past failures into the
 context — made the harness *worse* (78.0% → 66.0%), which no amount of reasoning
 about it would have predicted and which the measurement says plainly.
+
+The same generation was then run **on Atlas**, against the cluster instead of a local
+server, with the ledger, the searches and the vector index all living there: the same
+five proposals produced the same five refusals, and the retrieval strategy was worse
+again (78.0% → 62.0%, p=0.04). The verdicts did not depend on where the data was.
+
+### On Atlas
+
+The whole loop also runs on the cluster, not just the dataset: the ledger collections,
+their indexes and the `lessons_vec` Vector Search index live there, and the harness
+reads its own failures back out of Atlas. The nearest-neighbour query is a real
+`$vectorSearch` against that index — the harness falls back to cosine similarity
+in-process only when the cluster is a plain MongoDB, so the same code runs in both
+places without branching in the agent.
 
 ### On run-to-run variation
 
