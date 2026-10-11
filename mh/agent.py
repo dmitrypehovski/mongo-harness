@@ -165,15 +165,19 @@ def _indexes(db) -> str:
 
 
 def _lessons_block(lessons: list[dict]) -> str:
-    """Render retrieved memories of similar past failures."""
+    """Render retrieved memories of similar past failures.
+
+    The failed query itself is deliberately left out. Showing a model its own wrong
+    query is an invitation to repeat it, and the first version of this block did
+    exactly that: including it made the version measurably worse.
+    """
     if not lessons:
         return ""
-    lines = ["Earlier attempts at similar questions failed like this:"]
+    lines = ["Questions like these were answered wrongly before. What went wrong:"]
     for lesson in lessons[:5]:
         lines.append(
-            f"- question: {lesson.get('question', '')[:160]}\n"
-            f"  query tried: {str(lesson.get('failed_query', ''))[:200]}\n"
-            f"  what went wrong: {lesson.get('reason', '')[:160]}"
+            f"- {lesson.get('question', '')[:140]}\n"
+            f"  why it failed: {str(lesson.get('reason', ''))[:180]}"
         )
     return "\n".join(lines)
 

@@ -50,6 +50,104 @@ def test_envelope_refuses_frozen_keys():
     assert "frozen" in reason
 
 
+def _runs(passed: list[str], task_ids: list[str], repeat: int = 1) -> list[dict]:
+    """A run list in the shape the gate reads: one entry per question per repeat."""
+    return [{"task_id": tid, "repeat": repeat, "passed": tid in set(passed)} for tid in task_ids]
+
+
+def test_gate_refuses_a_version_that_is_simply_worse():
+    """Falling behind on the verification set is a refusal on its own."""
+    holdout = [f"h{i}" for i in range(25)]
+    incumbent = _runs(holdout[:20], holdout)
+    candidate = _runs(holdout[:10], holdout)
+    decision, reason, _ = gate.decide(incumbent, candidate, _runs([], []), _runs([], []))
+    assert decision == "rejected_regression"
+    assert "worse on the verification set" in reason
+
+
+def test_gate_refuses_a_version_that_only_fits_the_selection_set():
+    """Better where the search can see, no better where it cannot."""
+    holdout = [f"h{i}" for i in range(25)]
+    train = [f"t{i}" for i in range(32)]
+    decision, reason, _ = gate.decide(
+        _runs(holdout[:20], holdout),
+        _runs(holdout[:20], holdout),
+        _runs(train[:20], train),
+        _runs(train[:30], train),
+    )
+    assert decision == "rejected_outsample"
+    assert "selection set only" in reason
+
+
+def test_gate_refuses_a_version_that_wins_out_of_sample_but_hurts_the_selection_set():
+    """A gain that costs more than it pays is not broad improvement."""
+    holdout = [f"h{i}" for i in range(25)]
+    train = [f"t{i}" for i in range(32)]
+    decision, reason, _ = gate.decide(
+        _runs(holdout[:20], holdout),
+        _runs(holdout[:24], holdout),
+        _runs(train[:25], train),
+        _runs(train[:18], train),
+    )
+    assert decision == "rejected_narrow"
+    assert "not broad improvement" in reason
+
+
+def test_gate_refuses_a_gain_that_sits_inside_the_margin():
+    """One question out of twenty-five is not an improvement."""
+    holdout = [f"h{i}" for i in range(25)]
+    decision, reason, evidence = gate.decide(
+        _runs(holdout[:20], holdout),
+        _runs(holdout[:21], holdout),
+        _runs([], []),
+        _runs([], []),
+    )
+    assert decision == "rejected_insignificant"
+    assert "less than the" in reason
+    assert evidence["holdout_rate_before"] < evidence["holdout_rate_after"]
+
+
+def test_gate_promotes_an_improvement_that_is_both_large_and_out_of_sample():
+    """Four questions gained and none lost on repeated measurement is the bar."""
+    holdout = [f"h{i}" for i in range(25)]
+    train = [f"t{i}" for i in range(32)]
+    decision, reason, evidence = gate.decide(
+        _runs(holdout[:20], holdout),
+        _runs(holdout[:24], holdout),
+        _runs(train[:20], train),
+        _runs(train[:20], train),
+    )
+    assert decision == "promoted"
+    assert evidence["only_candidate"] == 4
+    assert evidence["only_incumbent"] == 0
+    assert evidence["p_value"] <= gate.SIGNIFICANCE
+
+
+def test_gate_promotes_an_improvement_that_lives_only_out_of_sample():
+    """No movement on the selection set is allowed; a fall is not."""
+    holdout = [f"h{i}" for i in range(25)]
+    train = [f"t{i}" for i in range(32)]
+    decision, reason, _ = gate.decide(
+        _runs(holdout[:20], holdout),
+        _runs(holdout[:24], holdout),
+        _runs(train[:20], train),
+        _runs(train[:19], train),
+    )
+    assert decision in {"promoted", "rejected_narrow"}, decision
+    assert decision == "promoted" or "not broad improvement" in reason
+
+
+def test_gate_refuses_comparison_of_verification_sets_of_different_size():
+    """Two different verification sets are not comparable, whatever they report."""
+    decision, reason, _ = gate.decide(
+        _runs(["h0", "h1"], ["h0", "h1"]),
+        _runs(["h0"], ["h0", "h1", "h2"]),
+        _runs([], []),
+        _runs([], []),
+    )
+    assert decision == "rejected_insignificant"
+    assert "differ in size" in reason
+
 def test_envelope_refuses_rules_that_ask_for_code_execution():
     """A rule asking for $where is refused before anything runs."""
     allowed, reason = gate.envelope_check(CURRENT, {**CURRENT, "rules": ["use $where for awkward filters"]})
@@ -146,8 +244,17 @@ def test_gate_refuses_a_version_that_hurts_the_selection_set():
     decision, reason, _ = gate.decide(
         incumbent_holdout, candidate_holdout, incumbent_train, candidate_train
     )
-    assert decision == "rejected_outsample"
+    assert decision == "rejected_narrow"
     assert "selection set falls" in reason
+
+
+def test_parser_accepts_javascript_regex_literals():
+    """A JavaScript regex literal is valid in mongosh, so the sandbox takes it too."""
+    parsed = scorer.parse_mql('db.comments.countDocuments({ email: /@fakegmail\\.com$/ })')
+    assert parsed.as_dict()["args"][0] == {"email": {"$regex": r"@fakegmail\.com$"}}
+
+    flagged = scorer.parse_mql('db.movies.find({ title: /^The/i }, { title: 1 })')
+    assert flagged.as_dict()["args"][0] == {"title": {"$regex": "^The", "$options": "i"}}
 
 
 def test_parser_accepts_javascript_style_output():

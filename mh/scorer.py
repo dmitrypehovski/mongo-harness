@@ -97,6 +97,13 @@ def _jsonable(value: Any) -> Any:
         return [_jsonable(v) for v in value]
     if isinstance(value, (str, int, float, bool)) or value is None:
         return value
+    if type(value).__name__ == "Regex":
+        # bson turns {"$regex": ...} into a Regex; render it the way it was written.
+        options = "".join(
+            letter for mask, letter in ((2, "i"), (8, "m"), (16, "s"), (64, "x"))
+            if value.flags & mask
+        )
+        return {"$regex": value.pattern, "$options": options} if options else {"$regex": value.pattern}
     return str(value)
 
 
@@ -230,11 +237,32 @@ def _js_to_json(text: str) -> str:
     return joined
 
 
+_JS_REGEX_LITERAL = re.compile(r":\s*/((?:[^/\\\n\]]|\\.)+)/([a-z]*)")
+
+
+def _regex_literals(text: str) -> str:
+    """Rewrite JavaScript regular expressions into the shape MongoDB stores them in.
+
+    ``{ email: /@example\\.com$/ }`` is valid in mongosh, but it is not JSON, and the
+    sandbox used to reject it. Rejecting a query the database would have accepted is
+    a defect in the measuring instrument, not in the version being measured.
+    """
+    def replacement(match: re.Match) -> str:
+        pattern = match.group(1).replace("\\", "\\\\").replace('"', '\\"')
+        flags = match.group(2)
+        if flags:
+            return f': {{"$regex": "{pattern}", "$options": "{flags}"}}'
+        return f': {{"$regex": "{pattern}"}}'
+
+    return _JS_REGEX_LITERAL.sub(replacement, text)
+
+
 def _load_value(text: str) -> Any:
     """Parse one argument value, accepting Extended JSON and JavaScript syntax."""
     stripped = text.strip()
     for pattern, replacement in _JS_CALLS:
         stripped = pattern.sub(replacement, stripped)
+    stripped = _regex_literals(stripped)
     attempts = (stripped, _js_to_json(stripped))
     errors = []
     for attempt in attempts:

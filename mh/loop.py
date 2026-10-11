@@ -213,6 +213,7 @@ def evaluate(
                         "collection": "",
                         "generated_query": str(result.get("query", ""))[:2000],
                         "executed_ok": result.get("status") == "ok",
+                        "status": str(result.get("status", "")),
                         "result_digest": result.get("digest", ""),
                         "expected_digest": answers[result["task_id"]]["digest"],
                         "passed": bool(result.get("passed")),

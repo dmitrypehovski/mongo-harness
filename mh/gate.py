@@ -228,9 +228,9 @@ def decide(
 
     if after < before:
         return (
-            "rejected_outsample",
-            f"the version is worse on the verification set ({before:.1%} -> {after:.1%}), "
-            "so the gain on the selection set does not carry over",
+            "rejected_regression",
+            f"the version is worse on the verification set ({before:.1%} -> {after:.1%}), so it is not kept "
+            "whatever it does on the selection set",
             evidence,
         )
 
@@ -261,7 +261,7 @@ def decide(
 
     if train_after < train_before - TRAIN_TOLERANCE:
         return (
-            "rejected_outsample",
+            "rejected_narrow",
             f"the verification set improves ({before:.1%} -> {after:.1%}) but the selection set falls from "
             f"{train_before:.1%} to {train_after:.1%}, so the change is not broad improvement",
             evidence,

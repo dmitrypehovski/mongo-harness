@@ -18,7 +18,7 @@
       "cot": false,
       "sample_docs_n": 3,
       "include_indexes": true,
-      "retrieve_k": 3,
+      "retrieve_k": 0,
       "replay_train_answers": false,
       "tools": ["find", "aggregate", "count"]
     }
@@ -58,24 +58,6 @@
     }
   },
   {
-    "strategy": "show the data, not just the schema",
-    "reasoning": "The failures share a pattern: the query is syntactically fine but compares the wrong type or assumes a field is present. Real documents in the context show which fields exist and how they are typed.",
-    "config": {
-      "system_prompt": "You are an expert MongoDB developer. Given the schema of a database and a question in plain language, you write one read-only MongoDB query that answers the question.\nReply with the executable query only. No explanation, no prose, no markdown fences.\nAllowed shapes:\n  db.<collection>.find(<filter>, <projection>).sort(<spec>).limit(<n>)\n  db.<collection>.aggregate([<stages>])\n  db.<collection>.countDocuments(<filter>)\nUse Extended JSON for dates and identifiers.",
-      "rules": [
-        "Use the operator that matches the question: $gt/$gte/$lt/$lte for ranges, $in for membership, $regex with $options for text patterns.",
-        "Look at the sample documents and match the stored type and field shape exactly.",
-        "Treat array fields as arrays: use $all or $size instead of comparing an array to a value."
-      ],
-      "cot": false,
-      "sample_docs_n": 3,
-      "include_indexes": true,
-      "retrieve_k": 0,
-      "replay_train_answers": false,
-      "tools": ["find", "aggregate", "count"]
-    }
-  },
-  {
     "strategy": "return exactly what was asked for",
     "reasoning": "Several answers are right in substance but return the wrong set of fields or the wrong number of rows. Making the output shape explicit in the rules should fix that class of mistake without touching anything else.",
     "config": {
@@ -90,6 +72,25 @@
       "sample_docs_n": 0,
       "include_indexes": false,
       "retrieve_k": 0,
+      "replay_train_answers": false,
+      "tools": ["find", "aggregate", "count"]
+    }
+  },
+  {
+    "strategy": "learn from the questions it keeps getting wrong",
+    "reasoning": "Failures repeat across questions of the same shape. Retrieving the most similar past failures from the ledger and putting them in the context should stop the same mistake being made twice, which is the whole point of keeping a memory.",
+    "config": {
+      "system_prompt": "You are an expert MongoDB developer. Given the schema of a database and a question in plain language, you write one read-only MongoDB query that answers the question.\nReply with the executable query only. No explanation, no prose, no markdown fences.\nAllowed shapes:\n  db.<collection>.find(<filter>, <projection>).sort(<spec>).limit(<n>)\n  db.<collection>.aggregate([<stages>])\n  db.<collection>.countDocuments(<filter>)",
+      "rules": [
+        "Use the operator that matches the question, and match the stored type exactly.",
+        "Return exactly the fields the question asks about, and add \"_id\": 0 unless the identifier was asked for.",
+        "When the question asks for a number of items, make the result have that many rows.",
+        "Treat fields as possibly missing rather than assuming they are always there."
+      ],
+      "cot": false,
+      "sample_docs_n": 0,
+      "include_indexes": false,
+      "retrieve_k": 6,
       "replay_train_answers": false,
       "tools": ["find", "aggregate", "count"]
     }

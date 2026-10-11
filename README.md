@@ -110,6 +110,7 @@ bash scripts/load_mflix_local.sh
 .venv/bin/python -m mh.cli edits         # the ledger
 .venv/bin/python -m mh.cli rollback      # undo the last promotion
 .venv/bin/python -m mh.cli demo          # the scripted demonstration
+bash demo/gate_proof.sh                  # the two guards, on outcomes no model decides
 ```
 
 Against Atlas:
@@ -121,20 +122,48 @@ bash scripts/restore_to_atlas.sh         # dataset, harness schema and vector in
 
 ## Results
 
-Starting version, before any edit:
+**The measuring instrument was wrong before anything else was.** The sandbox
+rejected JavaScript regular expressions — `{ email: /@example\.com$/ }` — which
+mongosh accepts, so every version was being punished for output the database would
+have run happily. Fixing the sandbox and changing nothing else moved the same
+version from **65.6% / 80.0%** to **75.0% / 88.0%** on the two suites, and removed
+every parse failure. Most of what looks like progress in a self-improving system is
+a repair to the ruler.
 
-* selection set: **21/32 = 65.6%**
-* verification set: **20/25 = 80.0%**
+One generation at temperature 0, both suites measured twice over the repeats:
 
-One generation, from candidates seeded with three strategies a harness plausibly
-reaches for:
+* current version: selection set **22/32 = 68.8%**, verification set **78.0%**
 
-| proposal | decision | why |
-|---|---|---|
-| express hard filters in JavaScript | `rejected_envelope` | a rule asked for `$where`; refused before it ran |
-| remember what already worked | recorded in the ledger | see `mh.cli edits` |
-| show the data, not just the schema | recorded in the ledger | see `mh.cli edits` |
-| return exactly what was asked for | recorded in the ledger | see `mh.cli edits` |
+| proposal | selection | verification | decision |
+|---|---|---|---|
+| write the rules down instead of rediscovering them | 68.8% → 68.8% | 78.0% → 84.0% (5 gained, 2 lost, p=0.45) | `rejected_insignificant` — real, but under the margin |
+| remember what already worked | 68.8% → **81.3%** | 78.0% → 80.0% | `rejected_insignificant` — +12.5 points where the search can see, +2 where it cannot |
+| express hard filters in JavaScript | — | — | `rejected_envelope` — a rule asked for `$where` |
+| return exactly what was asked for | 68.8% → 75.0% | 78.0% → 76.0% | `rejected_regression` |
+| learn from the questions it keeps getting wrong | 68.8% → 59.4% | 78.0% → 66.0% | `rejected_regression` |
+
+**Nothing was promoted in this generation.** Every proposal, its measurements, the
+decision and the reason are in the ledger; `mh.cli edits` prints them. That is the
+result the harness is built to produce: five plausible ways to improve itself, none
+of them provable, and not one of them taken on the strength of how good the idea
+sounded.
+
+Two of the refusals are worth reading twice. The memorising strategy — reuse the
+query that worked on a nearly identical earlier question — bought **+12.5 points on
+the selection set and +2 on the verification set**. It is the exact shape of
+overfitting, and it looks like the best idea in the table until the second column
+is read. The retrieval strategy — put the most similar past failures into the
+context — made the harness *worse* (78.0% → 66.0%), which no amount of reasoning
+about it would have predicted and which the measurement says plainly.
+
+### On run-to-run variation
+
+The same version measured 68.8% / 78.0% inside this generation and 75.0% / 88.0% in
+a separate process minutes earlier, at temperature 0. Provider-side nondeterminism
+survives the temperature setting, and it is larger than most edits. This is why the
+gate compares two versions inside the same generation, repeats every verification
+question, pools the paired observations, and refuses anything under an eight point
+margin even when the direction looks right.
 
 ## What this does not do
 
