@@ -108,6 +108,15 @@ Two things are not ours, and are credited rather than claimed:
   in MongoDB's own *natural language to MongoDB* documentation. They are a starting
   configuration that the gate then measures — not a result of the search.
 
+Platform tooling used while building it, also not ours:
+
+* **MongoDB's official MCP server** (`mcp/run_mongodb_mcp.sh`) — used as the read-only
+  audit path over the ledger, see the section below;
+* **MongoDB's published agent skills** (`mongodb/agent-skills`, Apache-2.0), installed
+  under `.agents/skills/` and pinned in `skills-lock.json`. They are instructions for
+  the coding agents that wrote this code, not part of its runtime, and they change no
+  measured number in this repository.
+
 The project runs inside the hackathon's Atlas sandbox cluster: the dataset lives in
 `sample_mflix`, and the ledger, its indexes and the `lessons_vec` vector search index
 live in `harness`.
@@ -116,6 +125,32 @@ This is **not** a retrieval application. Memory of past failures is one knob out
 eight a version can turn, and in the generation recorded above it was measured,
 found to make the harness worse, and refused. The subject of the project is the gate
 that decides which self-edits are real, not the search that feeds it.
+
+## Auditing the ledger with MongoDB's own MCP server
+
+The harness reaches MongoDB through the driver, with a tool surface the envelope holds
+down to `find`, `aggregate` and `count` — that is the constraint the whole demonstration
+rests on. The **audit** path is deliberately separate: `mcp/run_mongodb_mcp.sh` runs
+MongoDB's official MCP server against the same cluster in read-only mode, for a human
+or a judge who wants to inspect the ledger with the platform's own tooling.
+
+```bash
+mcporter list --stdio "bash mcp/run_mongodb_mcp.sh" --name mongodb-atlas --schema
+mcporter call --stdio "bash mcp/run_mongodb_mcp.sh" --name mongodb-atlas \
+  count connectionId=preconfigured database=harness collection=edits
+```
+
+Verified against the sandbox cluster:
+
+* `count` on `harness.edits` → 5 refusals; on `harness.lessons` → 119 memories;
+* `collection-indexes` on `harness.lessons` reports `lessons_vec` under `searchIndexes`,
+  so the Atlas Vector Search index is visible to the official tooling;
+* in this mode the server never registers the write tools, so an audit cannot become an
+  edit — the read-only boundary is enforced by the server, not by our good intentions.
+
+The MCP surface is intentionally **outside** the agent's loop. Handing the agent an open
+protocol that can reach every collection would make it impossible to show that it cannot
+widen its own access, which is the claim `bash demo/gate_proof.sh` exists to prove.
 
 ## Running it
 
