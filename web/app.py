@@ -159,6 +159,18 @@ def state() -> dict:
     }
 
 
+def clean_query(text: str) -> str:
+    """Show the query, not the markdown fence a model sometimes wraps it in."""
+    stripped = (text or "").strip()
+    if stripped.startswith("```"):
+        lines = stripped.splitlines()
+        lines = lines[1:] if lines and lines[0].startswith("```") else lines
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        stripped = "\n".join(lines).strip()
+    return stripped
+
+
 def ask(question: str) -> dict:
     """Answer one plain-language question with the current version of the agent."""
     db = database()
@@ -188,7 +200,7 @@ def ask(question: str) -> dict:
         "task_id": task["id"],
         "measured": task["id"] in answers,
         "ms": elapsed,
-        "query": result.get("readable_query") or result.get("query") or "",
+        "query": clean_query(result.get("readable_query") or result.get("query") or ""),
         "rows": result.get("rows"),
         "status": result.get("status"),
         "error": result.get("error") or "",

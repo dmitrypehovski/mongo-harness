@@ -215,7 +215,10 @@ of this project is the decisions behind them. Two things a person can actually d
 A static copy of the record — the ledger, one answered question and the product screenshots,
 exported from the live harness — is published at
 **https://dmitrypehovski.github.io/mongo-harness/**. It cannot run queries: Pages is static.
-The live thing is the application below.
+
+The interactive version runs the application from `web/`, reachable while it is up at
+**https://blend-repository-dee-auction.trycloudflare.com** (a tunnel: the address changes when the tunnel restarts, the permanent one is the
+page above). Or run it yourself: the application below.
 
 * **Ask the database in plain language.** The agent writes one query, runs it against the
   live `sample_mflix` collection, and its rows are compared with a reference answer
