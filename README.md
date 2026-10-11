@@ -157,7 +157,16 @@ widen its own access, which is the claim `bash demo/gate_proof.sh` exists to pro
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # then fill in MONGODB_URI and OPENROUTER_API_KEY
+```
 
+`requirements.txt` carries one dependency that is load-bearing but not fatal:
+`fastembed`, which loads a small local ONNX model for the memory embeddings. It is
+listed separately because nothing crashes without it — `mh/embed.py` falls back to a
+deterministic hashing vectoriser — but the fallback searches the harness's own past
+failures far worse than the model does, and the lessons already in the ledger were
+written with the model.
+
+```bash
 # a local MongoDB with the dataset loaded
 docker run -d --name mh-mongo -p 27017:27017 mongo:7
 bash scripts/load_mflix_local.sh

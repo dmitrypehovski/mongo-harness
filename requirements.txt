@@ -1,3 +1,9 @@
 pymongo>=4.6
 python-dotenv>=1.0
 pytest>=8.0
+
+# Embeddings for the harness memory. Optional by design: mh/embed.py falls back to a
+# deterministic hashing vectoriser when the model cannot be loaded, so the loop still
+# runs with nothing installed. Without it the memory search is materially weaker, and
+# the lessons already in the ledger were written with this model.
+fastembed>=0.4
