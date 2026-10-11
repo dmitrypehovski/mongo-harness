@@ -26,7 +26,8 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: The suite must pass with no model key and no embedding model
-        run: pytest -q
+        # -rs so a skipped test always states its reason: a silent skip reads as coverage
+        run: pytest -q -rs
       - name: The command line must come up
         run: |
           mh --help > /dev/null
