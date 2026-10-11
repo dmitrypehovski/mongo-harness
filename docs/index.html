@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>harness — record of self-edits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper: #f3f3ef; --paper-deep: #e9e9e3; --ink: #17191c;
+    --rule: #d8d8d1; --rule-bright: #b9bab1;
+    --stamp: #b8361a; --pass: #2c6046; --measure: #6f736a;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --record: "Courier Prime", "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--display); font-size: 16px; line-height: 1.55;
+  }
+  .sheet { max-width: 1180px; margin: 0 auto; padding: 44px 40px 72px; }
+  .strip {
+    display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+    font-family: var(--record); font-size: 13px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--measure);
+    padding-bottom: 12px; border-bottom: 1px solid var(--rule);
+  }
+  h1 { font-size: 54px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.04; margin: 34px 0 0; }
+  h2 {
+    font-family: var(--record); font-size: 13px; font-weight: 700; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--measure); margin: 46px 0 14px;
+  }
+  h3 { font-size: 25px; font-weight: 500; margin: 0 0 6px; letter-spacing: -0.01em; }
+  p { margin: 0 0 14px; }
+  .lede { font-size: 19px; color: var(--measure); max-width: 66ch; margin-top: 18px; }
+  .hair { height: 1px; background: var(--rule-bright); margin: 22px 0; }
+  .numbers { display: flex; gap: 44px; flex-wrap: wrap; font-family: var(--record); margin-top: 22px; }
+  .numbers b { display: block; font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .numbers i { font-style: normal; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--measure); }
+  .row {
+    border-top: 1px solid var(--rule); padding: 15px 0;
+    display: grid; grid-template-columns: 1fr 190px 210px; gap: 18px; align-items: baseline;
+  }
+  .row .why { grid-column: 1 / -1; font-family: var(--record); font-size: 15px; color: var(--measure); margin-top: 6px; }
+  .cell { font-family: var(--record); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .stamp {
+    display: inline-block; border: 2px solid var(--stamp); border-radius: 2px; padding: 2px 8px 1px;
+    font-family: var(--record); font-weight: 700; font-size: 13px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--stamp); transform: rotate(-3.2deg);
+  }
+  .pass { color: var(--pass); border-color: var(--pass); }
+  pre {
+    font-family: var(--record); font-size: 14.5px; line-height: 1.55; background: var(--paper-deep);
+    border: 1px solid var(--rule); padding: 14px 16px; overflow: auto; margin: 14px 0 0;
+  }
+  .shots { display: grid; gap: 18px; margin-top: 18px; }
+  .shot { border: 1px solid var(--rule); background: var(--paper-deep); padding: 8px; }
+  .shot img { width: 100%; display: block; }
+  .shot figcaption { font-family: var(--record); font-size: 14px; color: var(--measure); padding: 10px 4px 4px; }
+  .note {
+    border-left: 2px solid var(--stamp); padding-left: 18px; margin-top: 26px;
+    font-family: var(--record); font-size: 15px; color: var(--measure); max-width: 80ch;
+  }
+  a { color: var(--ink); }
+  code { font-family: var(--record); font-size: 14.5px; }
+  footer { margin-top: 54px; padding-top: 16px; border-top: 1px solid var(--rule); font-family: var(--record); font-size: 13px; color: var(--measure); }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="strip">
+    <span>Record of self-edits</span>
+    <span>11 October 2026 · MongoDB Atlas sandbox · sample_mflix</span>
+  </div>
+
+  <h1>The harness that earns its edits</h1>
+  <p class="lede">
+    An agent answers questions about a MongoDB database in plain language. It also proposes
+    changes to its own rules. A gate measures both versions on the same cases, decides
+    whether the change made the agent better, and writes its verdict, with the reason, into
+    the database. It refused all five proposals.
+  </p>
+
+  <div class="numbers" id="numbers"></div>
+
+  <h2>The ledger: five proposals, five refusals</h2>
+  <div id="ledger"></div>
+
+  <h2>One question, answered for real</h2>
+  <p class="lede" style="margin-top:0">
+    This is a captured run against the live cluster: the query the agent wrote, whether its
+    rows matched the reference answer computed straight from the data, and how long it took.
+  </p>
+  <div id="example"></div>
+
+  <h2>The product</h2>
+  <p class="lede" style="margin-top:0">
+    Three moments from the running page: opening, a question typed in, and the answer. The
+    gate's last refusal sits beside it with the arithmetic behind it, and a person can
+    overrule it — that decision is written to MongoDB too.
+  </p>
+  <div class="shots">
+    <figure class="shot"><img src="app-empty.png" alt="the page on opening" /><figcaption>the page on opening: ask the database, and review the gate</figcaption></figure>
+    <figure class="shot"><img src="app-typed.png" alt="a question typed in" /><figcaption>a question typed in plain language</figcaption></figure>
+    <figure class="shot"><img src="app-answered.png" alt="the answer" /><figcaption>the answer: query written, rows compared with the reference, verdict given</figcaption></figure>
+  </div>
+
+  <div class="note">
+    This page is a static copy of the record. The numbers here were exported from the live
+    harness and the screenshots are of it running, but a static page cannot run queries
+    against Atlas or call a model. To use the real thing, run it from the repository:
+    <code>python -m web.app</code>.
+  </div>
+
+  <h2>Using the gate in your own harness</h2>
+  <p class="lede" style="margin-top:0">
+    The gate and the instrument audit are separate modules: <code>mh/gate.py</code>,
+    <code>mh/adapter.py</code>, <code>mh/ruler.py</code>. Nothing in them knows about this
+    agent. A harness provides two methods — how it measures a version, and what it proposes —
+    and gets back a decision with a reason.
+  </p>
+
+  <footer>
+    <span id="counts"></span> · <a href="https://github.com/dmitrypehovski/mongo-harness">github.com/dmitrypehovski/mongo-harness</a>
+  </footer>
+</div>
+
+<script>
+const pct = (v) => (v === null || v === undefined ? "—" : (v * 100).toFixed(1) + "%");
+const esc = (s) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+Promise.all([
+  fetch("state.json").then((r) => r.json()),
+  fetch("example-ask.json").then((r) => r.json()),
+]).then(([state, asked]) => {
+  document.getElementById("numbers").innerHTML =
+    `<div><i>selection set</i><b>${pct(state.rates.train.rate)}</b>${state.rates.train.passed}/${state.rates.train.total}</div>` +
+    `<div><i>verification set</i><b>${pct(state.rates.holdout.rate)}</b>${state.rates.holdout.passed}/${state.rates.holdout.total}</div>` +
+    `<div><i>current version</i><b>${state.version.id}</b>${state.version.rules} rules · ${state.version.tools.length} tools</div>` +
+    `<div><i>nothing promoted</i><b>${state.counts.edits}</b>refusals, all with a reason</div>`;
+
+  document.getElementById("ledger").innerHTML = state.edits.map((edit) => {
+    const e = edit.evidence;
+    const word = edit.decision.replace("rejected_", "");
+    return `<div class="row">
+      <div>
+        <h3>${esc(edit.strategy)}</h3>
+        <span class="stamp">${esc(word)}</span>
+      </div>
+      <div class="cell">${pct(e.train_before)} → ${pct(e.train_after)}</div>
+      <div class="cell">${pct(e.holdout_before)} → ${pct(e.holdout_after)}${e.p_value !== null ? " p=" + e.p_value : ""}</div>
+      <div class="why">${esc(edit.reason)}</div>
+    </div>`;
+  }).join("");
+
+  document.getElementById("example").innerHTML = `
+    <h3>${esc(asked.question)}</h3>
+    <p style="margin-top:6px"><span class="stamp ${asked.passed ? "pass" : ""}">${asked.passed ? "agrees with the reference answer" : "differs"}</span></p>
+    <pre>${esc(asked.query)}</pre>
+    <div class="cell" style="text-align:left;margin-top:12px">
+      rows returned ${asked.rows} · ${asked.ms} ms · suite question ${esc(asked.task_id)} · matched by ${esc(asked.how)}
+    </div>`;
+
+  document.getElementById("counts").textContent =
+    `${state.counts.runs} runs · ${state.counts.steps} steps · ${state.counts.lessons} lessons · ${state.counts.edits} refused edits`;
+});
+</script>
+</body>
+</html>

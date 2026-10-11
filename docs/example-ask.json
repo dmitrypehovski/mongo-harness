@@ -1,0 +1,24 @@
+{
+  "question": "How many movies list exactly one person in the cast?",
+  "matched_by": "",
+  "task_id": "a06",
+  "measured": true,
+  "ms": 1879,
+  "query": "db.movies.countDocuments({ cast: { $size: 1 } })",
+  "rows": 1,
+  "status": "ok",
+  "error": "",
+  "reason": "",
+  "passed": true,
+  "how": "digest",
+  "reference_rows": [
+    {
+      "count": 301
+    }
+  ],
+  "answer_rows": [
+    {
+      "count": 301
+    }
+  ]
+}

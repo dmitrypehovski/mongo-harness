@@ -1,0 +1,426 @@
+{
+  "version": {
+    "id": 0,
+    "promoted_by": "genesis",
+    "rules": 0,
+    "tools": [
+      "find",
+      "aggregate",
+      "count"
+    ]
+  },
+  "rates": {
+    "train": {
+      "passed": 23,
+      "total": 32,
+      "rate": 0.7188,
+      "at": "2026-10-11T20:21:48.617000+00:00"
+    },
+    "holdout": {
+      "passed": 19,
+      "total": 25,
+      "rate": 0.76,
+      "at": "2026-10-11T20:22:24.134000+00:00"
+    }
+  },
+  "counts": {
+    "runs": 17,
+    "steps": 467,
+    "lessons": 119,
+    "edits": 5
+  },
+  "edits": [
+    {
+      "strategy": "learn from the questions it keeps getting wrong",
+      "decision": "rejected_regression",
+      "reason": "the version is worse on the verification set (78.0% -> 62.0%), so it is not kept whatever it does on the selection set",
+      "rationale": "Failures repeat across questions of the same shape. Retrieving the most similar past failures from the ledger and putting them in the context should stop the same mistake being made twice, which is the whole point of keeping a memory.",
+      "at": "2026-10-11T20:28:47.312000+00:00",
+      "evidence": {
+        "train_before": 0.7188,
+        "train_after": 0.6875,
+        "holdout_before": 0.78,
+        "holdout_after": 0.62,
+        "p_value": 0.0386,
+        "gained": 2,
+        "lost": 10,
+        "repeats": 2
+      }
+    },
+    {
+      "strategy": "return exactly what was asked for",
+      "decision": "rejected_insignificant",
+      "reason": "nothing moves: selection set 71.9% -> 65.6%, verification set 78.0% -> 78.0%",
+      "rationale": "Several answers are right in substance but return the wrong set of fields or the wrong number of rows. Making the output shape explicit in the rules should fix that class of mistake without touching anything else.",
+      "at": "2026-10-11T20:28:47.129000+00:00",
+      "evidence": {
+        "train_before": 0.7188,
+        "train_after": 0.6562,
+        "holdout_before": 0.78,
+        "holdout_after": 0.78,
+        "p_value": 1.0,
+        "gained": 1,
+        "lost": 1,
+        "repeats": 2
+      }
+    },
+    {
+      "strategy": "express hard filters in JavaScript",
+      "decision": "rejected_envelope",
+      "reason": "a rule asks for $where, which the envelope refuses",
+      "rationale": "Some filters are awkward in MQL. Allowing the database to evaluate a JavaScript predicate inside $where makes any question expressible directly, and shortens the harness rules.",
+      "at": "2026-10-11T20:28:46.946000+00:00",
+      "evidence": {
+        "train_before": null,
+        "train_after": null,
+        "holdout_before": null,
+        "holdout_after": null,
+        "p_value": null,
+        "gained": null,
+        "lost": null,
+        "repeats": null
+      }
+    },
+    {
+      "strategy": "remember what already worked",
+      "decision": "rejected_insignificant",
+      "reason": "the verification set does move (78.0% -> 84.0%) but by less than the 8% this gate asks for, so the change is not separable from run-to-run noise (McNemar p=0.38, 4 question(s) gained against 1 lost)",
+      "rationale": "Many questions repeat in spirit. If a nearly identical question was answered correctly before, reuse that query instead of writing a new one: fewer chances to make a mistake, and no cost.",
+      "at": "2026-10-11T20:28:46.762000+00:00",
+      "evidence": {
+        "train_before": 0.7188,
+        "train_after": 0.75,
+        "holdout_before": 0.78,
+        "holdout_after": 0.84,
+        "p_value": 0.375,
+        "gained": 4,
+        "lost": 1,
+        "repeats": 2
+      }
+    },
+    {
+      "strategy": "write the rules down instead of rediscovering them",
+      "decision": "rejected_insignificant",
+      "reason": "the verification set does move (78.0% -> 84.0%) but by less than the 8% this gate asks for, so the change is not separable from run-to-run noise (McNemar p=0.25, 3 question(s) gained against 0 lost)",
+      "rationale": "The failures are not one-offs, they are classes: wrong type comparisons, fields assumed to be present, the wrong output shape, missing tie breakers. Writing those down as rules once, and showing real documents so the stored types are visible, should fix all of them together instead of one at a time.",
+      "at": "2026-10-11T20:28:46.578000+00:00",
+      "evidence": {
+        "train_before": 0.7188,
+        "train_after": 0.7188,
+        "holdout_before": 0.78,
+        "holdout_after": 0.84,
+        "p_value": 0.25,
+        "gained": 3,
+        "lost": 0,
+        "repeats": 2
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "decision": "override",
+      "note": "",
+      "strategy": "learn from the questions it keeps getting wrong",
+      "at": "2026-10-11T22:44:18.639000+00:00"
+    },
+    {
+      "decision": "uphold",
+      "note": "",
+      "strategy": "learn from the questions it keeps getting wrong",
+      "at": "2026-10-11T22:44:16.769000+00:00"
+    },
+    {
+      "decision": "uphold",
+      "note": "Проверка интерфейса: ворота правы, p выше порога.",
+      "strategy": "learn from the questions it keeps getting wrong",
+      "at": "2026-10-11T22:23:18.719000+00:00"
+    }
+  ],
+  "questions": [
+    {
+      "id": "a01",
+      "question": "How many movies have an IMDb rating above 9 and more than 100,000 votes?",
+      "split": "train"
+    },
+    {
+      "id": "a02",
+      "question": "How many movies list Documentary among their genres?",
+      "split": "train"
+    },
+    {
+      "id": "a04",
+      "question": "How many movies were released before the year 1920?",
+      "split": "train"
+    },
+    {
+      "id": "a06",
+      "question": "How many movies list exactly one person in the cast?",
+      "split": "train"
+    },
+    {
+      "id": "a07",
+      "question": "How many movies are rated G and were released after 1970?",
+      "split": "train"
+    },
+    {
+      "id": "a09",
+      "question": "How many movies list both English and French among their languages?",
+      "split": "train"
+    },
+    {
+      "id": "a11",
+      "question": "How many movies have a runtime under 20 minutes?",
+      "split": "train"
+    },
+    {
+      "id": "b01",
+      "question": "Return the 5 highest IMDb rated movies among those with more than 500,000 votes; show only the title and the IMDb rating, best first.",
+      "split": "train"
+    },
+    {
+      "id": "b03",
+      "question": "List the 8 longest movies with their title and runtime, longest first, ties broken by title.",
+      "split": "train"
+    },
+    {
+      "id": "b04",
+      "question": "Return the titles of 12 movies whose title starts with the letter A, in alphabetical order.",
+      "split": "train"
+    },
+    {
+      "id": "b06",
+      "question": "Return the 5 most recently released movies with their title and release date, newest first.",
+      "split": "train"
+    },
+    {
+      "id": "b08",
+      "question": "Return 10 titles of movies from 1994 with an IMDb rating above 8, sorted alphabetically.",
+      "split": "train"
+    },
+    {
+      "id": "b10",
+      "question": "Return the titles of 20 movies released in 1999, in alphabetical order.",
+      "split": "train"
+    },
+    {
+      "id": "c01",
+      "question": "What is the average IMDb rating of all movies released after 2000? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "c03",
+      "question": "How many movies are there for each content rating? Return the 10 largest groups, biggest first, ties broken by rating name.",
+      "split": "train"
+    },
+    {
+      "id": "c04",
+      "question": "For each genre, how many movies are there? Return the 10 biggest genres, most movies first, ties broken by genre name.",
+      "split": "train"
+    },
+    {
+      "id": "c06",
+      "question": "What is the total number of award wins across all movies released before 1950? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "c08",
+      "question": "What is the highest IMDb rating within each content rating category? Return 8 categories, highest rating first, ties broken by category name.",
+      "split": "train"
+    },
+    {
+      "id": "c10",
+      "question": "How many movies have no tomatoes critic rating field? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "c12",
+      "question": "What is the total number of award nominations for movies rated R? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "c14",
+      "question": "How many movies list exactly three genres? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "d01",
+      "question": "Which 10 movies have the most comments? Return the movie title and the number of comments, most comments first, ties broken by title.",
+      "split": "train"
+    },
+    {
+      "id": "d03",
+      "question": "How many comments were written for movies released before 1950? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "d05",
+      "question": "How many comments do the movies of each content rating have in total? Return one row per rating, with the number of comments, ordered alphabetically by rating.",
+      "split": "train"
+    },
+    {
+      "id": "d07",
+      "question": "What is the average number of comments per movie among movies with an IMDb rating above 8? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "e01",
+      "question": "How many theaters are in the state of California? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "e03",
+      "question": "How many theaters are there in total? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "e05",
+      "question": "How many theaters lie inside the box that covers Texas, with longitude between -106.65 and -93.5 and latitude between 25.84 and 36.5? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "f01",
+      "question": "How many comments were posted during the year 2015? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "f03",
+      "question": "How many movies have more than 20 people in the cast? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "f05",
+      "question": "How many comments were written by people whose email ends with @fakegmail.com? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "f07",
+      "question": "How many movies were released in 1995 with an IMDb rating of at least 8.5? Return one number.",
+      "split": "train"
+    },
+    {
+      "id": "a03",
+      "question": "How many movies list both Action and Comedy among their genres?",
+      "split": "holdout"
+    },
+    {
+      "id": "a05",
+      "question": "How many movies have no tomatoes field at all?",
+      "split": "holdout"
+    },
+    {
+      "id": "a08",
+      "question": "How many movie titles contain the word war, ignoring case?",
+      "split": "holdout"
+    },
+    {
+      "id": "a10",
+      "question": "How many movies have more than 50 award wins?",
+      "split": "holdout"
+    },
+    {
+      "id": "a12",
+      "question": "How many movies list both USA and Canada among their countries?",
+      "split": "holdout"
+    },
+    {
+      "id": "b02",
+      "question": "List the 10 oldest movies with their title and year, oldest first, ties broken by title.",
+      "split": "holdout"
+    },
+    {
+      "id": "b05",
+      "question": "Return the 10 movies with the most IMDb votes, showing the title and the number of votes.",
+      "split": "holdout"
+    },
+    {
+      "id": "b07",
+      "question": "Return the 10 movies with the largest number of viewer reviews in tomatoes, showing the title and tomatoes.viewer.numReviews, largest first.",
+      "split": "holdout"
+    },
+    {
+      "id": "b09",
+      "question": "Return the 6 longest movies released in 2014 with title and runtime, longest first, ties broken by title.",
+      "split": "holdout"
+    },
+    {
+      "id": "c02",
+      "question": "How many movies were released in each year from 1990 to 1994? List the years in order.",
+      "split": "holdout"
+    },
+    {
+      "id": "c05",
+      "question": "What is the average runtime for each genre? Return the 10 genres with the most movies, most movies first, ties broken by genre name.",
+      "split": "holdout"
+    },
+    {
+      "id": "c07",
+      "question": "For each director, how many movies did they direct? Return the 10 directors with the most movies, most movies first, ties broken by director name.",
+      "split": "holdout"
+    },
+    {
+      "id": "c09",
+      "question": "How many movies have three or more genres? Return one number.",
+      "split": "holdout"
+    },
+    {
+      "id": "c11",
+      "question": "For each country, how many movies are there? Return the 10 countries with the most movies, most movies first, ties broken by country name.",
+      "split": "holdout"
+    },
+    {
+      "id": "c13",
+      "question": "For each year from 2000 to 2010 inclusive, what is the average runtime? Return the rows in year order.",
+      "split": "holdout"
+    },
+    {
+      "id": "d02",
+      "question": "How many movies have at least one comment? Return one number.",
+      "split": "holdout"
+    },
+    {
+      "id": "d04",
+      "question": "Which 10 people wrote the most comments? Return the name and the number of comments, most comments first, ties broken by name.",
+      "split": "holdout"
+    },
+    {
+      "id": "d06",
+      "question": "How many different movies have comments? Return one number.",
+      "split": "holdout"
+    },
+    {
+      "id": "d08",
+      "question": "Which 5 movies released after 2010 have the most comments? Return the title and the number of comments, most comments first, ties broken by title.",
+      "split": "holdout"
+    },
+    {
+      "id": "e02",
+      "question": "Return the 5 theaters in Chicago with their theater id, street and city, in ascending order of theater id.",
+      "split": "holdout"
+    },
+    {
+      "id": "e04",
+      "question": "Which cities have more than 8 theaters? Return the city and the number of theaters, in alphabetical order of city.",
+      "split": "holdout"
+    },
+    {
+      "id": "f02",
+      "question": "How many movies have an IMDb rating exactly equal to 7? Return one number.",
+      "split": "holdout"
+    },
+    {
+      "id": "f04",
+      "question": "How many comments mention the word great in their text, ignoring case? Return one number.",
+      "split": "holdout"
+    },
+    {
+      "id": "f06",
+      "question": "How many movies have a tomatoes fresh count exactly equal to zero? Return one number.",
+      "split": "holdout"
+    },
+    {
+      "id": "f08",
+      "question": "How many movies have a runtime of exactly 90 minutes and an IMDb rating above 7? Return one number.",
+      "split": "holdout"
+    }
+  ]
+}
