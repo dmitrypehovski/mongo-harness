@@ -1,0 +1,6 @@
+An agent that answers questions about a database in plain language, and rewrites its own rules.
+It starts with no rules and three tools; a gate decides whether a change made it better. Five proposals, five refusals. One gained three points where the agent could see, six where it could not, and the gate called that noise. Another lost sixteen on questions it never trains. That is fitting versus improving.
+It audits the ruler it is measured with: eleven probes agree, and with a defect injected it fails loudly.
+The product: ask in plain language, see the query and whether it matches the reference, and overrule the gate.
+It cannot grant itself a tool: it loses aggregation, and is refused when it asks for it back.
+It remembers everything in MongoDB, rolls back with one command, and writes its own exam for a database it has never seen. github dot com slash dmitrypehovski slash mongo-harness.

@@ -8,8 +8,8 @@
       "count"
     ],
     "rules": 0,
-    "train": "23/32 = 71.9%",
-    "holdout": "19/25 = 76.0%"
+    "train": "24/32 = 75.0%",
+    "holdout": "20/25 = 80.0%"
   },
   "edits": [
     {
@@ -79,9 +79,9 @@
     }
   ],
   "counts": {
-    "runs": 17,
-    "steps": 467,
-    "lessons": 119,
+    "runs": 29,
+    "steps": 570,
+    "lessons": 143,
     "edits": 5,
     "versions": 1
   },

@@ -56,8 +56,13 @@ def collect(uri: str) -> dict:
     config = version.get("config") or {}
     rates: dict[str, str] = {}
     for suite in ("train", "holdout"):
+        # only runs of the question set this film is about: a measurement of another dataset
+        # would otherwise land in the film as if it were the film suite's own figure
+        from mh import store
+
         run = db.runs.find_one(
-            {"version_id": version.get("version", 0), "suite": suite}, sort=[("finished_at", -1)]
+            store.dataset_query({"version_id": version.get("version", 0), "suite": suite}),
+            sort=[("finished_at", -1)],
         )
         if run:
             rates[suite] = _rate(run)
