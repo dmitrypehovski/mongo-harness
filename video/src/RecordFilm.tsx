@@ -352,7 +352,7 @@ const AppScene: React.FC = () => {
   const zoom = interpolate(local, [0, 120], [1.012, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
-    <Frame record="Record of self-edits · 04" right="try it: 157.180.49.112:8080">
+    <Frame record="Record of self-edits · 04" right="try it: dmitrypehovski.github.io/mongo-harness">
       <div style={{ ...KICKER }}>the live product, three real moments</div>
       <div style={{ height: 20 }} />
       <div style={{ position: "relative", border: `1px solid ${COLORS.rule}`, background: COLORS.paperDeep, padding: 8 }}>
@@ -384,7 +384,7 @@ const AppScene: React.FC = () => {
       <div style={{ marginTop: "auto" }} />
       <Reveal delay={Math.round(APP_STATES[2] * 30) + 40}>
         <div style={{ ...MEASURE, fontSize: 26, color: COLORS.ink }}>
-          ask it yourself: 157.180.49.112:8080
+          ask it yourself: dmitrypehovski.github.io/mongo-harness
         </div>
       </Reveal>
     </Frame>
@@ -492,7 +492,7 @@ const CloseScene: React.FC = () => {
       <div style={{ height: 28 }} />
       <Reveal delay={32}>
         <div style={{ ...MEASURE, fontSize: 27, color: COLORS.ink }}>
-          try it: 157.180.49.112:8080
+          try it: dmitrypehovski.github.io/mongo-harness
         </div>
       </Reveal>
       <Reveal delay={38}>

@@ -212,6 +212,11 @@ of this project is the decisions behind them. Two things a person can actually d
 
     MONGODB_URI=... python -m web.app        # http://127.0.0.1:8080
 
+A static copy of the record — the ledger, one answered question and the product screenshots,
+exported from the live harness — is published at
+**https://dmitrypehovski.github.io/mongo-harness/**. It cannot run queries: Pages is static.
+The live thing is the application below.
+
 * **Ask the database in plain language.** The agent writes one query, runs it against the
   live `sample_mflix` collection, and its rows are compared with a reference answer
   computed straight from the data. You see the query, the rows, and whether the two

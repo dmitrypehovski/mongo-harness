@@ -13,8 +13,8 @@ the hackathon sandbox project, organised as: dataset in `sample_mflix`, ledger i
 
 What was done, and what to repeat on another cluster:
 
-1. **Database user** with `Atlas admin`, and the machine that loads the data added to
-   **Network Access** (the loading host is `157.180.49.112`).
+1. **Database user** with `Atlas admin`, and the host that loads the data added to
+   **Network Access**.
 2. **Load and prepare**, from the machine allowed above:
 
 ```bash
