@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>harness — ask the database, and review what it wants to change about itself</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0d0f12; --surface: #14171c; --surface-2: #191d24;
+    --hairline: #242932; --bright: #333a46;
+    --ink: #f2f4f8; --muted: #9aa3b2; --faint: #5f6875;
+    --agree: #5ec98a; --refused: #e0a44a; --regression: #e2585c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 15px; line-height: 1.5;
+  }
+  a { color: var(--ink); }
+  header {
+    display: flex; align-items: baseline; gap: 28px; flex-wrap: wrap;
+    padding: 22px 30px; border-bottom: 1px solid var(--hairline);
+  }
+  .wordmark { font-weight: 600; letter-spacing: -0.01em; font-size: 17px; }
+  .wordmark span { color: var(--faint); font-weight: 400; }
+  .numbers { margin-left: auto; display: flex; gap: 26px; font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+  .numbers b { display: block; font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .numbers i { font-style: normal; color: var(--faint); text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px; }
+  main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(360px, 1fr); gap: 0; }
+  .col { padding: 26px 30px 40px; }
+  .col + .col { border-left: 1px solid var(--hairline); }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--faint); font-weight: 500; margin: 0 0 18px; }
+  h3 { font-size: 19px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  p.lede { color: var(--muted); margin: 0 0 20px; max-width: 62ch; }
+  textarea {
+    width: 100%; background: var(--surface); color: var(--ink); border: 1px solid var(--hairline);
+    border-radius: 3px; padding: 13px 14px; font-family: "IBM Plex Sans", sans-serif; font-size: 15px; resize: vertical;
+  }
+  textarea:focus, button:focus-visible { outline: 1px solid var(--bright); outline-offset: 1px; }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  button {
+    background: var(--ink); color: #0b0d10; border: 0; border-radius: 3px; padding: 10px 16px;
+    font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--bright); }
+  button.amber { background: var(--refused); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .chip {
+    background: var(--surface); border: 1px solid var(--hairline); border-radius: 3px;
+    padding: 6px 10px; font-size: 12.5px; color: var(--muted); cursor: pointer;
+  }
+  .chip:hover { border-color: var(--bright); color: var(--ink); }
+  .card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 3px; padding: 18px; margin-top: 20px; }
+  .verdict { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 8px; border-radius: 2px; }
+  .v-agree { color: var(--agree); border: 1px solid var(--agree); }
+  .v-bad { color: var(--regression); border: 1px solid var(--regression); }
+  .v-none { color: var(--faint); border: 1px solid var(--hairline); }
+  pre {
+    background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 3px;
+    padding: 13px 14px; overflow: auto; font-family: "IBM Plex Mono", monospace; font-size: 12.5px;
+    line-height: 1.55; margin: 14px 0 0; max-height: 190px;
+  }
+  .meta { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--muted); margin-top: 12px; display: flex; gap: 20px; flex-wrap: wrap; }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 7px 16px; font-family: "IBM Plex Mono", monospace; font-size: 12.5px; margin: 14px 0 0; }
+  .kv dt { color: var(--faint); }
+  .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .edit { border-top: 1px solid var(--hairline); padding: 13px 0; display: grid; grid-template-columns: 10px 1fr; gap: 12px; }
+  .dot { width: 8px; height: 8px; margin-top: 7px; }
+  .dot.amber { background: var(--refused); } .dot.red { background: var(--regression); }
+  .edit .why { color: var(--faint); font-size: 13px; margin-top: 3px; }
+  .edit .dec { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .note { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--faint); margin-top: 10px; }
+  footer { border-top: 1px solid var(--hairline); padding: 18px 30px; color: var(--faint); font-family: "IBM Plex Mono", monospace; font-size: 12px; display: flex; gap: 22px; flex-wrap: wrap; }
+  .spinner { color: var(--faint); font-family: "IBM Plex Mono", monospace; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wordmark">harness <span>· a self-improving agent that has to earn its edits</span></div>
+  <div class="numbers" id="numbers"></div>
+</header>
+
+<main>
+  <section class="col">
+    <h2>Ask the database</h2>
+    <h3 id="ask-title">Ask a question in plain language.</h3>
+    <p class="lede">
+      The agent writes one MongoDB query, runs it against the live <code>sample_mflix</code>
+      database, and its rows are compared with a reference answer computed straight from the
+      data. When the two disagree, that disagreement is what the gate acts on.
+    </p>
+    <textarea id="question" rows="2" placeholder="e.g. How many movies in the sample database are from 1999?"></textarea>
+    <div class="row">
+      <button id="ask">Run it</button>
+      <span class="spinner" id="ask-status"></span>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div id="result"></div>
+  </section>
+
+  <section class="col">
+    <h2>Waiting for a human</h2>
+    <h3>The gate's last refusal.</h3>
+    <p class="lede">
+      The gate decides on its own and it refused this. A person can still overrule it, and
+      the overrule is written to MongoDB with who decided and why.
+    </p>
+    <div id="pending"></div>
+    <div id="reviews"></div>
+  </section>
+</main>
+
+<section class="col" style="border-top:1px solid var(--hairline)">
+  <h2>The ledger</h2>
+  <div id="ledger"></div>
+</section>
+
+<footer>
+  <span id="counts"></span>
+  <a href="https://github.com/dmitrypehovski/mongo-harness">github.com/dmitrypehovski/mongo-harness</a>
+  <span>every number on this page is read from MongoDB Atlas, not typed here</span>
+</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const pct = (v) => (v === null || v === undefined ? "—" : (v * 100).toFixed(1) + "%");
+const esc = (s) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+let STATE = null;
+
+function drawState(state) {
+  STATE = state;
+  if (state.error) { document.body.innerHTML = "<pre>" + esc(state.error) + "</pre>"; return; }
+
+  $("numbers").innerHTML = ["train", "holdout"].map((split) => {
+    const r = state.rates[split];
+    const label = split === "train" ? "selection set" : "verification set";
+    return `<div><i>${label}</i><b>${r ? pct(r.rate) : "—"}</b><span style="color:var(--faint)">${r ? r.passed + "/" + r.total : ""}</span></div>`;
+  }).join("") + `<div><i>version</i><b>${state.version.id}</b><span style="color:var(--faint)">${state.version.rules} rule(s), ${state.version.tools.length} tool(s)</span></div>`;
+
+  $("counts").innerHTML =
+    `${state.counts.runs} runs · ${state.counts.steps} steps · ${state.counts.lessons} lessons · ${state.counts.edits} refused edits`;
+
+  $("chips").innerHTML = state.questions.slice(0, 4).map((q) =>
+    `<span class="chip" data-q="${esc(q.question)}">${esc(q.question)}</span>`).join("");
+  document.querySelectorAll(".chip").forEach((chip) => chip.addEventListener("click", () => {
+    $("question").value = chip.dataset.q; ask();
+  }));
+
+  const edit = state.edits[0];
+  if (edit) {
+    const e = edit.evidence;
+    $("pending").innerHTML = `
+      <div class="card">
+        <div class="dec" style="color:var(--refused)">${esc(edit.decision)}</div>
+        <h3 style="margin-top:8px">${esc(edit.strategy)}</h3>
+        <div style="color:var(--muted)">${esc(edit.reason)}</div>
+        <dl class="kv">
+          <dt>selection set</dt><dd>${pct(e.train_before)} <span style="color:var(--faint)">→</span> ${pct(e.train_after)}</dd>
+          <dt>verification set</dt><dd>${pct(e.holdout_before)} <span style="color:var(--faint)">→</span> ${pct(e.holdout_after)}</dd>
+          <dt>questions gained / lost</dt><dd>${e.gained ?? "—"} / ${e.lost ?? "—"}</dd>
+          <dt>McNemar p</dt><dd>${e.p_value ?? "—"}</dd>
+          <dt>verification repeats</dt><dd>${e.repeats ?? "—"}</dd>
+        </dl>
+        <textarea id="note" rows="2" style="margin-top:14px" placeholder="Why? This is stored with the decision."></textarea>
+        <div class="row">
+          <button class="ghost" data-decision="uphold">Uphold the gate</button>
+          <button class="amber" data-decision="override">Override and promote</button>
+          <span class="spinner" id="review-status"></span>
+        </div>
+        <div class="note">A refusal is the gate working. An override is a person taking responsibility for it.</div>
+      </div>`;
+    document.querySelectorAll("[data-decision]").forEach((button) => button.addEventListener("click", () =>
+      sendReview(button.dataset.decision, edit.strategy)));
+  } else {
+    $("pending").innerHTML = `<div class="card" style="color:var(--muted)">No proposal has been reviewed yet.</div>`;
+  }
+
+  $("reviews").innerHTML = state.reviews.length
+    ? `<h2 style="margin-top:26px">Decided by a person</h2>` + state.reviews.map((r) =>
+        `<div class="edit"><span class="dot amber"></span><div>
+           <div class="dec" style="color:${r.decision === "override" ? "var(--refused)" : "var(--agree)"}">${esc(r.decision)}</div>
+           <div>${esc(r.strategy)}</div>
+           <div class="why">${esc(r.note) || "<i>no note</i>"}</div>
+           <div class="note">${esc(r.at)}</div>
+         </div></div>`).join("")
+    : "";
+
+  $("ledger").innerHTML = state.edits.map((e) => `
+    <div class="edit">
+      <span class="dot ${e.decision === "rejected_regression" ? "red" : "amber"}"></span>
+      <div>
+        <div class="dec" style="color:${e.decision === "rejected_regression" ? "var(--regression)" : "var(--refused)"}">${esc(e.decision)}</div>
+        <div>${esc(e.strategy)}</div>
+        <div class="why">${esc(e.reason)}</div>
+      </div>
+    </div>`).join("");
+}
+
+async function ask() {
+  const question = $("question").value.trim();
+  if (!question) return;
+  $("ask").disabled = true;
+  $("ask-status").textContent = "asking the agent, then running the query against Atlas…";
+  $("result").innerHTML = "";
+  try {
+    const response = await fetch("/api/ask", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+    const data = await response.json();
+    if (data.error) { $("result").innerHTML = `<div class="card" style="color:var(--regression)">${esc(data.error)}</div>`; return; }
+    const cls = data.passed === true ? "v-agree" : data.passed === false ? "v-bad" : "v-none";
+    const text = data.passed === true ? "agrees with the reference answer"
+      : data.passed === false ? "differs from the reference answer"
+      : "not in the reference set, so this is not a measurement";
+    $("result").innerHTML = `
+      <div class="card">
+        <span class="verdict ${cls}">${text}</span>
+        <pre>${esc(data.query) || "<i>no query was produced</i>"}</pre>
+        <div class="meta">
+          <span>rows returned: ${data.rows ?? "—"}</span>
+          <span>${data.ms} ms</span>
+          <span>${esc(data.task_id === "free" ? "ad hoc question" : "suite question " + data.task_id)}</span>
+          ${data.how ? `<span>${esc(data.how)}</span>` : ""}
+        </div>
+        ${data.error ? `<div style="color:var(--regression);margin-top:12px">${esc(data.error)}</div>` : ""}
+        ${data.reason ? `<div style="color:var(--muted);margin-top:12px">${esc(data.reason)}</div>` : ""}
+        ${data.reference_rows.length ? `<pre>reference rows\n${esc(JSON.stringify(data.reference_rows, null, 1))}</pre>` : ""}
+        ${data.answer_rows.length ? `<pre>rows this query returned\n${esc(JSON.stringify(data.answer_rows, null, 1))}</pre>` : ""}
+      </div>`;
+  } catch (error) {
+    $("result").innerHTML = `<div class="card" style="color:var(--regression)">${esc(error)}</div>`;
+  } finally {
+    $("ask").disabled = false;
+    $("ask-status").textContent = "";
+  }
+}
+
+async function sendReview(decision, strategy) {
+  const note = ($("note") && $("note").value.trim()) || "";
+  $("review-status").textContent = "writing to MongoDB…";
+  const response = await fetch("/api/review", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ decision, note, strategy }),
+  });
+  const data = await response.json();
+  $("review-status").textContent = data.ok ? "logged " + data.logged : "failed: " + (data.error || "");
+  const state = await (await fetch("/api/state")).json();
+  drawState(state);
+}
+
+$("ask").addEventListener("click", ask);
+$("question").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) ask();
+});
+fetch("/api/state").then((r) => r.json()).then(drawState);
+</script>
+</body>
+</html>

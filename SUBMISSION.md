@@ -38,7 +38,14 @@ answers can be computed. Verified on the cluster: 21,349 movies, 41,079 comments
 anonymously with no token (HTTP 200), 84 files, 6 commits, `main` in sync with local
 `HEAD`, README readable without authentication. No secret is present in any commit.
 
-## 3. The one minute video
+## 3. What you can use, not just read
+
+`python -m web.app` opens the product surface: ask the database a question in plain
+language and get the query, the rows and whether they match the reference answer; then
+review the gate's last refusal with the arithmetic behind it and record a human override
+in MongoDB. It is one page over the same ledger the CLI writes.
+
+## 4. The one minute video
 
 **Recorded by rendering it, not by pointing a camera at a screen.** The film is built
 with Remotion from `video/`, and every number on screen is exported from the live ledger

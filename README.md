@@ -174,6 +174,27 @@ cd video && npm install && npm run render   # writes video/out/harness-demo.mp4
 The narration is a synthesised voice. The rules require a demo video with working audio,
 and a synthetic track cannot fail to record in a noisy room.
 
+## The product surface: ask the database, and review the gate
+
+Not a dashboard, and deliberately so: a dashboard would show you numbers, and the point
+of this project is the decisions behind them. Two things a person can actually do:
+
+    MONGODB_URI=... python -m web.app        # http://127.0.0.1:8080
+
+* **Ask the database in plain language.** The agent writes one query, runs it against the
+  live `sample_mflix` collection, and its rows are compared with a reference answer
+  computed straight from the data. You see the query, the rows, and whether the two
+  agree. Typing a question that is not in the suite still gets answered, and the page
+  says plainly that nothing there is a measurement.
+* **Review the gate's last refusal.** The proposal, the arithmetic that killed it
+  (selection and verification before and after, questions gained and lost, the McNemar p
+  value, how many times the verification set was re-run), and a written override a person
+  can apply. Upholding is the gate working; overriding is a person taking responsibility,
+  and both land in MongoDB with who decided and why.
+
+The page reads the same ledger the command line writes. It is a window onto the harness,
+not a second implementation of it, so it cannot drift from what the CLI reports.
+
 ## Running it
 
 ```bash
