@@ -1,5 +1,8 @@
 # The harness that earns its edits
 
+[![tests](https://github.com/dmitrypehovski/mongo-harness/actions/workflows/tests.yml/badge.svg)](https://github.com/dmitrypehovski/mongo-harness/actions/workflows/tests.yml)
+[![licence: Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue.svg)](LICENSE)
+
 An agent harness that improves itself — and a gate that decides whether the
 improvement is real.
 
