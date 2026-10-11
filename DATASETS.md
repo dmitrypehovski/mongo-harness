@@ -24,7 +24,11 @@ reference queries, and then **throws most of them away**. Nothing is kept on the
   moves between the two runs is dropped — a question with a drifting answer cannot judge anything;
 - a query that returns no rows is dropped, unless it is a count;
 - a question whose reference disagrees with it about the shape of the answer is dropped (see below);
-- questions that repeat each other are dropped.
+- questions that repeat each other are dropped;
+- a question that would otherwise be unfair is **made precise instead of dropped**: if the
+  reference returns a field the question never named, the question is amended to name the keys of
+  each row (``Return each row with the keys `_id`, `theaterCount`.``); if the question asks for
+  particular fields while the reference returns whole documents, the question now says so.
 
 Every refusal is printed with its reason, so the output is a record of what the model proposed and
 what survived, not a silent filter:
