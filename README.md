@@ -8,6 +8,32 @@ against **Statement 1: Recursive Harnessing**, with a deliberate reach into
 **Statement 2: Long Horizon Engineering**: every run is kept in MongoDB, and the
 harness starts each new attempt from what its own past failures taught it.
 
+## Install and run
+
+```bash
+pip install "mongo-harness[memory]"     # or: pip install -e ".[dev]" to work on it
+
+export MONGODB_URI="mongodb+srv://..."  # your cluster, see .env.example
+export OPENROUTER_API_KEY="..."         # the model that answers the questions
+
+mh init                                 # build the ledger and the reference answers
+mh run --split train --show-failures    # measure the current version
+mh status                               # the current version and how it last measured
+mh generation --want 4                  # propose, measure, decide: one turn of the loop
+mh audit-ruler                          # check the instrument against the database itself
+harness-web                             # the product surface on http://127.0.0.1:8080
+```
+
+With your own data instead of `sample_mflix`:
+
+```bash
+mh scaffold-dataset --database shop --collections orders --want 14 --out datasets/shop.json
+mh run --dataset datasets/shop.json --show-failures
+```
+
+`pytest -q` runs the whole suite with no database, no model key and no embedding model, so it
+is safe to run anywhere.
+
 ## The idea
 
 Most self-improving agents edit their own prompt and then declare victory, because
@@ -212,7 +238,7 @@ refuses and in what order, and which thresholds you should change for your own t
 The one-minute video is **generated, not screen-recorded**, and it is in this repository
 as a Remotion project (`video/`). It is designed as an inspection record rather than a
 console: paper, typewriter measurements, and a vermilion stamp for every refusal, because
-the subject's own world is paperwork and a verdict. The product page in `web/` wears the
+the subject's own world is paperwork and a verdict. The product page in `mh/web/` wears the
 same identity. Every figure in it is extracted from the live ledger
 by `scripts/export_video_data.py`: the current version and its rates from
 `harness.versions` and `harness.runs`, the five proposals with their before/after rates,
@@ -235,13 +261,13 @@ and a synthetic track cannot fail to record in a noisy room.
 Not a dashboard, and deliberately so: a dashboard would show you numbers, and the point
 of this project is the decisions behind them. Two things a person can actually do:
 
-    MONGODB_URI=... python -m web.app        # http://127.0.0.1:8080
+    MONGODB_URI=... python -m mh.web.app     # http://127.0.0.1:8080
 
 A static copy of the record — the ledger, one answered question and the product screenshots,
 exported from the live harness — is published at
 **https://dmitrypehovski.github.io/mongo-harness/**. It cannot run queries: Pages is static.
 
-The interactive version runs the application from `web/`, reachable while it is up at
+The interactive version runs the application from `mh/web/`, reachable while it is up at
 **https://blend-repository-dee-auction.trycloudflare.com** (a tunnel: the address changes when the tunnel restarts, the permanent one is the
 page above). Or run it yourself: the application below.
 

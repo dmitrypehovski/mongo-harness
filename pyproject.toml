@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mongo-harness"
+version = "0.1.0"
+description = "An agent harness that improves itself, and a gate that decides whether the improvement is real"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Dmitry Pekhovski" }]
+license = { text = "Apache-2.0" }
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: Apache Software License",
+  "Topic :: Database",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "pymongo>=4.6",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# The harness memory falls back to a deterministic hashing vectoriser without this, so the
+# loop runs either way; the lessons already in the ledger were written with this model.
+memory = ["fastembed>=0.4"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+mh = "mh.cli:main"
+harness-web = "mh.web.app:main"
+
+[project.urls]
+Homepage = "https://github.com/dmitrypehovski/mongo-harness"
+Documentation = "https://github.com/dmitrypehovski/mongo-harness/blob/main/DATASETS.md"
+
+[tool.setuptools]
+packages = ["mh", "mh.web"]
+license-files = ["LICENSE"]
+
+[tool.setuptools.package-data]
+# the product surface is a package too: without this the installed harness-web serves a 500
+"mh.web" = ["index.html"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

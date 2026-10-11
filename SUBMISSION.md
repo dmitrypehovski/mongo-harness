@@ -40,7 +40,7 @@ anonymously with no token (HTTP 200), 84 files, 6 commits, `main` in sync with l
 
 ## 3. What you can use, not just read
 
-`python -m web.app` opens the product surface: ask the database a question in plain
+`python -m mh.web.app` opens the product surface: ask the database a question in plain
 language and get the query, the rows and whether they match the reference answer; then
 review the gate's last refusal with the arithmetic behind it and record a human override
 in MongoDB. It is one page over the same ledger the CLI writes.
