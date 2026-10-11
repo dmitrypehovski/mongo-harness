@@ -155,6 +155,16 @@ The MCP surface is intentionally **outside** the agent's loop. Handing the agent
 protocol that can reach every collection would make it impossible to show that it cannot
 widen its own access, which is the claim `bash demo/gate_proof.sh` exists to prove.
 
+## Running it on another dataset
+
+The questions, the reference answers and the instrument probes are the only parts of this
+project that are specific to `sample_mflix`; the gate, the audit and the adapter are not.
+`mh/datasets.py` and `datasets/` are the start of that separation: a pack is a JSON file
+listing questions with reference queries, validated before anything is measured with it
+(`python -m mh.cli run` still runs the film suite — the packs are groundwork here, not
+wired into the command line yet, and nothing about the working path was changed to add
+them).
+
 ## Use this gate in your own harness
 
 The gate is not welded to this agent. `mh/adapter.py` is a thin layer that lets a
