@@ -98,7 +98,8 @@ sentence explaining the decision. A promotion is undone with one command.
 
 Everything in this repository was written on 11 October 2026, at the hackathon and for
 it: the task suite, the query sandbox, the gate, the ledger, the generation loop, the
-CLI, the ruler audit that checks the sandbox against the database, the scripts and the
+CLI, the ruler audit that checks the sandbox against the database, the video
+composition that renders the submission film from the ledger, the scripts and the
 56 tests. No code from any earlier project was reused,
 adapted or ported, and nothing here is presented as new that was not written today.
 
@@ -152,6 +153,26 @@ Verified against the sandbox cluster:
 The MCP surface is intentionally **outside** the agent's loop. Handing the agent an open
 protocol that can reach every collection would make it impossible to show that it cannot
 widen its own access, which is the claim `bash demo/gate_proof.sh` exists to prove.
+
+## The submission video
+
+The one-minute video is **generated, not screen-recorded**, and it is in this repository
+as a Remotion project (`video/`). Every figure in it is extracted from the live ledger
+by `scripts/export_video_data.py`: the current version and its rates from
+`harness.versions` and `harness.runs`, the five proposals with their before/after rates,
+p-values and verdicts from `harness.edits`, and the sixteen audit verdicts from running
+`mh.ruler.audit` against the cluster in both its clean and fault-injected state.
+
+That matters for the same reason the gate matters: a video that is typed by hand can
+disagree with the ledger and nobody would know. This one cannot, and a reviewer can
+re-render it:
+
+```bash
+cd video && npm install && npm run render   # writes video/out/harness-demo.mp4
+```
+
+The narration is a synthesised voice. The rules require a demo video with working audio,
+and a synthetic track cannot fail to record in a noisy room.
 
 ## Running it
 

@@ -1,0 +1,94 @@
+{
+  "current": {
+    "version": 0,
+    "promoted_by": "genesis",
+    "tools": [
+      "find",
+      "aggregate",
+      "count"
+    ],
+    "rules": 0,
+    "train": "23/32 = 71.9%",
+    "holdout": "19/25 = 76.0%"
+  },
+  "edits": [
+    {
+      "strategy": "write the rules down instead of rediscovering them",
+      "decision": "rejected_insignificant",
+      "reason": "the verification set does move (78.0% -> 84.0%) but by less than the 8% this gate asks for, so the change is not separable from run-to-run noise (McNemar p=0.25, 3 question(s) gained against 0 lost)",
+      "train_before": 0.7188,
+      "train_after": 0.7188,
+      "holdout_before": 0.78,
+      "holdout_after": 0.84,
+      "p_value": 0.25,
+      "repeats": 2
+    },
+    {
+      "strategy": "remember what already worked",
+      "decision": "rejected_insignificant",
+      "reason": "the verification set does move (78.0% -> 84.0%) but by less than the 8% this gate asks for, so the change is not separable from run-to-run noise (McNemar p=0.38, 4 question(s) gained against 1 lost)",
+      "train_before": 0.7188,
+      "train_after": 0.75,
+      "holdout_before": 0.78,
+      "holdout_after": 0.84,
+      "p_value": 0.375,
+      "repeats": 2
+    },
+    {
+      "strategy": "express hard filters in JavaScript",
+      "decision": "rejected_envelope",
+      "reason": "a rule asks for $where, which the envelope refuses",
+      "train_before": null,
+      "train_after": null,
+      "holdout_before": null,
+      "holdout_after": null,
+      "p_value": null,
+      "repeats": null
+    },
+    {
+      "strategy": "return exactly what was asked for",
+      "decision": "rejected_insignificant",
+      "reason": "nothing moves: selection set 71.9% -> 65.6%, verification set 78.0% -> 78.0%",
+      "train_before": 0.7188,
+      "train_after": 0.6562,
+      "holdout_before": 0.78,
+      "holdout_after": 0.78,
+      "p_value": 1.0,
+      "repeats": 2
+    },
+    {
+      "strategy": "learn from the questions it keeps getting wrong",
+      "decision": "rejected_regression",
+      "reason": "the version is worse on the verification set (78.0% -> 62.0%), so it is not kept whatever it does on the selection set",
+      "train_before": 0.7188,
+      "train_after": 0.6875,
+      "holdout_before": 0.78,
+      "holdout_after": 0.62,
+      "p_value": 0.0386,
+      "repeats": 2
+    }
+  ],
+  "counts": {
+    "runs": 17,
+    "steps": 467,
+    "lessons": 119,
+    "edits": 5,
+    "versions": 1
+  },
+  "audit": {
+    "clean": [
+      "11 equivalence probe(s): 11 agreed, 0 diverged",
+      "5 policy probe(s): 5 refused, 0 admitted",
+      "The instrument agrees with the database on every probe. Measurements stand."
+    ],
+    "injected": [
+      "11 equivalence probe(s): 7 agreed, 4 diverged",
+      "5 policy probe(s): 5 refused, 0 admitted",
+      "The instrument is lying. Fix this before trusting any measurement:",
+      "* javascript regex literal: sugar: cannot parse argument '{\"title\": /the/i}': Expecting value: line 1 column 11 (char 10) / strict: ok",
+      "* regex literal with escaped dot: sugar: cannot parse argument '{\"email\": /@fakegmail\\\\.com$/i}': Expecting value: line 1 column 11 (char 10) / strict: ok",
+      "* regex literal on an array field: sugar: cannot parse argument '{\"cast\": /AC/i}': Expecting value: line 1 column 10 (char 9) / strict: ok",
+      "* regex literal with a wildcard prefix: sugar: cannot parse argument '{\"title\": /^The /}': Expecting value: line 1 column 11 (char 10) / strict: ok"
+    ]
+  }
+}

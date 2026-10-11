@@ -40,15 +40,22 @@ anonymously with no token (HTTP 200), 84 files, 6 commits, `main` in sync with l
 
 ## 3. The one minute video
 
-The full script, second by second, is in **`demo/VIDEO_60S.md`**. Two things it settles
-that are easy to get wrong:
+**Recorded by rendering it, not by pointing a camera at a screen.** The film is built
+with Remotion from `video/`, and every number on screen is exported from the live ledger
+by `scripts/export_video_data.py`, so the video cannot drift from what the gate actually
+decided. Verified output: 60.00 seconds, 1920x1080, h264 with an AAC stereo track at
+48 kHz, mean level -25.5 dB, 4.02 MB.
 
-* the spoken lines are in English, 148 words, and fit the minute at demo pace;
-* the two commands it depends on were timed against the cluster: `mh.cli status` 3.1s,
-  `mh.cli edits` 2.5s, so both are safe to run live.
+* script and beat list: `demo/VIDEO_60S.md`;
+* source: `video/src/HarnessDemo.tsx`, cuts in `video/src/timeline.ts`;
+* re-render: `cd video && npm install && npm run render`;
+* the narration is synthesised, which satisfies the audio requirement without depending
+  on a microphone in a loud room.
 
-The rules also require the video to be recorded on site today with working audio, and
-the demo to show only what was built during the event.
+The **live** demo in front of the judges is a different three minutes, and
+`demo/VIDEO_60S.md` has that plan too, with the two questions to expect and the honest
+answer to each. Commands it relies on were timed against the cluster: `mh.cli status`
+3.1s, `mh.cli edits` 2.5s, `mh.cli audit-ruler` about 5s.
 
 ## 4. Description (paste into the submission form)
 
