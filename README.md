@@ -94,6 +94,29 @@ sentence explaining the decision. A promotion is undone with one command.
 * **`$lookup` across collections** — eight of the questions can only be answered by
   joining `movies` with `comments`.
 
+## What was built during the event
+
+Everything in this repository was written on 11 October 2026, at the hackathon and for
+it: the task suite, the query sandbox, the gate, the ledger, the generation loop, the
+CLI, the scripts and the 47 tests. No code from any earlier project was reused,
+adapted or ported, and nothing here is presented as new that was not written today.
+
+Two things are not ours, and are credited rather than claimed:
+
+* the `sample_mflix` dataset, restored from MongoDB's own sample dump;
+* the nine rules in `MONGO_GUIDANCE_RULES` (`mh/agent.py`), which restate the guidance
+  in MongoDB's own *natural language to MongoDB* documentation. They are a starting
+  configuration that the gate then measures — not a result of the search.
+
+The project runs inside the hackathon's Atlas sandbox cluster: the dataset lives in
+`sample_mflix`, and the ledger, its indexes and the `lessons_vec` vector search index
+live in `harness`.
+
+This is **not** a retrieval application. Memory of past failures is one knob out of
+eight a version can turn, and in the generation recorded above it was measured,
+found to make the harness worse, and refused. The subject of the project is the gate
+that decides which self-edits are real, not the search that feeds it.
+
 ## Running it
 
 ```bash

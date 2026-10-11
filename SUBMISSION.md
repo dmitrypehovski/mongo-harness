@@ -77,7 +77,10 @@ model decides those outcomes.
 > rejecting JavaScript regular expressions that mongosh accepts, and repairing that
 > ruler moved the same version from 65.6%/80.0% to 75.0%/88.0% without touching the
 > harness. Every version, run, step, proposal and refusal is in the ledger, and a
-> promotion is undone with one command.
+> promotion is undone with one command. Everything in the repository was written
+> during the event, in the hackathon's Atlas sandbox cluster; the only borrowed
+> artefacts are MongoDB's own sample dataset and its published query guidance, both
+> credited in the README.
 
 ## 5. What is honest about the limits
 
