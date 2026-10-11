@@ -30,6 +30,7 @@ from mh import agent, loop, scorer, store, tasks
 
 ROOT = Path(__file__).resolve().parent
 PORT = int(os.environ.get("MH_WEB_PORT", "8080"))
+HOST = os.environ.get("MH_WEB_HOST", "127.0.0.1")
 
 
 # --------------------------------------------------------------------- data layer
@@ -308,8 +309,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    print(f"harness product surface on http://127.0.0.1:{PORT}", flush=True)
+    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    print(f"harness product surface on http://{HOST}:{PORT}", flush=True)
     server.serve_forever()
 
 

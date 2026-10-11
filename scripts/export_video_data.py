@@ -46,6 +46,8 @@ def collect(uri: str) -> dict:
                 "holdout_before": evidence.get("holdout_rate_before"),
                 "holdout_after": evidence.get("holdout_rate_after"),
                 "p_value": evidence.get("p_value"),
+            "gained": evidence.get("only_candidate"),
+            "lost": evidence.get("only_incumbent"),
                 "repeats": evidence.get("repeats"),
             }
         )
