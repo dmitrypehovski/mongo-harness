@@ -1,0 +1,151 @@
+# The harness that earns its edits
+
+An agent harness that improves itself — and a gate that decides whether the
+improvement is real.
+
+Built for the **Harness Engineering & Model Wrangling** hackathon (SF Tech Week),
+against **Statement 1: Recursive Harnessing**, with a deliberate reach into
+**Statement 2: Long Horizon Engineering**: every run is kept in MongoDB, and the
+harness starts each new attempt from what its own past failures taught it.
+
+## The idea
+
+Most self-improving agents edit their own prompt and then declare victory, because
+nothing measures whether the edit helped. This one cannot do that: **a version only
+becomes current if it survives a gate**, and the gate is code, not a sentence in a
+prompt.
+
+A *harness version* is a plain document in MongoDB. Everything the harness may
+change about itself lives there:
+
+| field | meaning |
+|---|---|
+| `system_prompt` | the instructions given to the model |
+| `rules` | query-writing rules, added, rewritten or dropped |
+| `cot` | whether the model reasons step by step first |
+| `sample_docs_n` | how many real documents are shown in the context |
+| `include_indexes` | whether collection indexes are shown |
+| `retrieve_k` | how many similar past failures are pulled from memory |
+| `replay_train_answers` | whether to reuse a query that worked on a similar earlier question |
+| `tools` | which query shapes are allowed |
+
+Because a version is data, every change is diffable, storable and reversible. There
+is no code generation anywhere in the loop: the harness rewrites its own
+**configuration**, which is what makes the whole thing auditable.
+
+## The task suite
+
+Questions in plain language about the `sample_mflix` dataset, each with a reference
+query whose **result set** defines the right answer. The harness is never scored on
+query text — any query that returns the right rows passes.
+
+* **57 questions**, 32 for selecting edits and 25 for verifying them, across six
+  families: filters, sorting and projection, aggregation, cross-collection joins,
+  geography, and type traps.
+* The split is fixed by hand so both halves cover every family. A promoted version
+  cannot redraw the boundary to make itself look better.
+* `scripts/check_tasks.py` verifies every reference query: it parses, runs twice,
+  confirms the digest is stable, and looks one row past every cut-off to catch
+  ambiguous "top N" questions where two correct queries could legitimately return
+  different rows.
+
+Two rules make the measurement fair:
+
+* a document's `_id` is ignored for "find" answers (asking for titles should not
+  fail because the identifier was or was not included), and kept for grouped
+  answers, where the identifier *is* the group key;
+* field naming is free — `{"count": 47}` and `{"movies": 47}` are the same answer —
+  but returning extra fields, or the wrong number of rows, is not.
+
+## The gate
+
+Every proposed version is checked in this order.
+
+1. **Envelope.** Refused before anything runs if it introduces unknown keys,
+   touches `envelope_version`, empties the prompt, widens its own tool access, or
+   adds a rule asking for `$where`, `$function`, `$accumulator`, `$out` or `$merge`.
+   The harness cannot grant itself new powers.
+2. **Selection set.** It has to do at least as well as the current version on the 32
+   questions that drive the search.
+3. **Verification set**, measured over repeated runs, because a single pass of 25
+   questions cannot tell an improvement from a good day.
+4. **Decision.** Promote only if the verification set improves by more than the
+   noise margin and the paired test (exact McNemar) backs it. Otherwise the edit is
+   refused, and the reason recorded is specific: `rejected_outsample` when the gain
+   lives only on the selection set, `rejected_insignificant` when it is inside the
+   noise, `rejected_envelope` when it tried to widen its own powers.
+
+Every proposal — accepted or refused — is written to the `edits` ledger with its
+evidence: rates before and after, sample sizes, discordant counts, p-value and a
+sentence explaining the decision. A promotion is undone with one command.
+
+## What MongoDB is doing here
+
+* `versions`, `runs`, `steps`, `edits`, `lessons`, `fetches` — the harness's
+  state, history and audit trail. Memory is the database, not the process: a new
+  run rebuilds what it knows by querying the ledger.
+* **Atlas Vector Search** over `lessons.embedding` — before answering, the harness
+  retrieves the most similar past failures and puts them in the context. This is
+  the long-horizon part: the harness gets better because it remembers, not because
+  anyone retrained anything.
+* **MQL indexes** on the ledger collections, and a `$vectorSearch` aggregation with
+  an automatic fall back to in-process cosine similarity so the same code runs on a
+  laptop and on Atlas.
+* **`$lookup` across collections** — eight of the questions can only be answered by
+  joining `movies` with `comments`.
+
+## Running it
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env          # then fill in MONGODB_URI and OPENROUTER_API_KEY
+
+# a local MongoDB with the dataset loaded
+docker run -d --name mh-mongo -p 27017:27017 mongo:7
+bash scripts/load_mflix_local.sh
+
+.venv/bin/python -m mh.cli init          # collections, starting version, reference answers
+.venv/bin/python -m mh.cli run           # measure the current version, change nothing
+.venv/bin/python -m mh.cli generation    # propose, measure, decide
+.venv/bin/python -m mh.cli edits         # the ledger
+.venv/bin/python -m mh.cli rollback      # undo the last promotion
+.venv/bin/python -m mh.cli demo          # the scripted demonstration
+```
+
+Against Atlas:
+
+```bash
+export MONGODB_URI='mongodb+srv://...'
+bash scripts/restore_to_atlas.sh         # dataset, harness schema and vector index
+```
+
+## Results
+
+Starting version, before any edit:
+
+* selection set: **21/32 = 65.6%**
+* verification set: **20/25 = 80.0%**
+
+One generation, from candidates seeded with three strategies a harness plausibly
+reaches for:
+
+| proposal | decision | why |
+|---|---|---|
+| express hard filters in JavaScript | `rejected_envelope` | a rule asked for `$where`; refused before it ran |
+| remember what already worked | recorded in the ledger | see `mh.cli edits` |
+| show the data, not just the schema | recorded in the ledger | see `mh.cli edits` |
+| return exactly what was asked for | recorded in the ledger | see `mh.cli edits` |
+
+## What this does not do
+
+* It does not generate code. It edits configuration. That is the point, and it is
+  also the limit: it can only improve along axes someone thought to put in the
+  version document.
+* The gate is only as good as its verification set. If the verification questions
+  resemble the selection questions, a strategy that memorises them will look like
+  progress. Memory reuse (`replay_train_answers`) is exactly such a strategy, and
+  the ledger shows what the gate did with it and why.
+* The thresholds — the noise margin, the p-value — are ours, documented in
+  `mh/gate.py`. They are judgement calls, not laws of nature.
+* Models drift between runs. Every holdout measurement is repeated, and the spread
+  is visible in the ledger, but a small true gain can still hide under it.

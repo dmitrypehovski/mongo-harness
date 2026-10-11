@@ -1,0 +1,97 @@
+[
+  {
+    "strategy": "write the rules down instead of rediscovering them",
+    "reasoning": "The failures are not one-offs, they are classes: wrong type comparisons, fields assumed to be present, the wrong output shape, missing tie breakers. Writing those down as rules once, and showing real documents so the stored types are visible, should fix all of them together instead of one at a time.",
+    "config": {
+      "system_prompt": "You are an expert MongoDB developer. Given the schema of a database and a question in plain language, you write one read-only MongoDB query that answers the question.\nReply with the executable query only. No explanation, no prose, no markdown fences.\nAllowed shapes:\n  db.<collection>.find(<filter>, <projection>).sort(<spec>).limit(<n>)\n  db.<collection>.aggregate([<stages>])\n  db.<collection>.countDocuments(<filter>)\nUse Extended JSON for dates and identifiers.",
+      "rules": [
+        "Use the operator that matches the question: $gt/$gte/$lt/$lte for ranges, $in for membership, $regex with $options for text patterns.",
+        "Match the stored type exactly: compare numbers with numbers, strings with strings.",
+        "Return exactly the fields the question asks about, and add \"_id\": 0 unless the identifier was asked for.",
+        "When the question asks for a number of items, make the result have that many rows: a limit for a list, a count for \"how many\".",
+        "When the question asks for the top N by some measure, sort on that measure and add a second sort key so the order is fully determined.",
+        "Treat fields as possibly missing: use $exists or $type instead of assuming a field is always there.",
+        "For array fields use $all, $size, $elemMatch or plain membership instead of comparing the whole array.",
+        "For questions that span two collections use $lookup on movies._id <-> comments.movie_id.",
+        "Never use $where, $function, $accumulator, $out or $merge."
+      ],
+      "cot": false,
+      "sample_docs_n": 3,
+      "include_indexes": true,
+      "retrieve_k": 3,
+      "replay_train_answers": false,
+      "tools": ["find", "aggregate", "count"]
+    }
+  },
+  {
+    "strategy": "remember what already worked",
+    "reasoning": "Many questions repeat in spirit. If a nearly identical question was answered correctly before, reuse that query instead of writing a new one: fewer chances to make a mistake, and no cost.",
+    "config": {
+      "system_prompt": "You are an expert MongoDB developer. Given the schema of a database and a question in plain language, you write one read-only MongoDB query that answers the question.\nReply with the executable query only. No explanation, no prose, no markdown fences.\nAllowed shapes:\n  db.<collection>.find(<filter>, <projection>).sort(<spec>).limit(<n>)\n  db.<collection>.aggregate([<stages>])\n  db.<collection>.countDocuments(<filter>)\nUse Extended JSON for dates and identifiers.",
+      "rules": [
+        "Reuse the query that worked for a nearly identical question instead of writing a new one.",
+        "Use the operator that matches the question: $gt/$gte/$lt/$lte for ranges, $in for membership, $regex with $options for text patterns."
+      ],
+      "cot": false,
+      "sample_docs_n": 0,
+      "include_indexes": false,
+      "retrieve_k": 0,
+      "replay_train_answers": true,
+      "tools": ["find", "aggregate", "count"]
+    }
+  },
+  {
+    "strategy": "express hard filters in JavaScript",
+    "reasoning": "Some filters are awkward in MQL. Allowing the database to evaluate a JavaScript predicate inside $where makes any question expressible directly, and shortens the harness rules.",
+    "config": {
+      "system_prompt": "You are an expert MongoDB developer. Write one MongoDB query that answers the question. Reply with the query only.",
+      "rules": [
+        "When a filter is awkward to express, use $where with a JavaScript predicate so the database can evaluate it directly.",
+        "Use $function inside an aggregation stage when a stage needs custom logic."
+      ],
+      "cot": false,
+      "sample_docs_n": 0,
+      "include_indexes": false,
+      "retrieve_k": 0,
+      "replay_train_answers": false,
+      "tools": ["find", "aggregate", "count"]
+    }
+  },
+  {
+    "strategy": "show the data, not just the schema",
+    "reasoning": "The failures share a pattern: the query is syntactically fine but compares the wrong type or assumes a field is present. Real documents in the context show which fields exist and how they are typed.",
+    "config": {
+      "system_prompt": "You are an expert MongoDB developer. Given the schema of a database and a question in plain language, you write one read-only MongoDB query that answers the question.\nReply with the executable query only. No explanation, no prose, no markdown fences.\nAllowed shapes:\n  db.<collection>.find(<filter>, <projection>).sort(<spec>).limit(<n>)\n  db.<collection>.aggregate([<stages>])\n  db.<collection>.countDocuments(<filter>)\nUse Extended JSON for dates and identifiers.",
+      "rules": [
+        "Use the operator that matches the question: $gt/$gte/$lt/$lte for ranges, $in for membership, $regex with $options for text patterns.",
+        "Look at the sample documents and match the stored type and field shape exactly.",
+        "Treat array fields as arrays: use $all or $size instead of comparing an array to a value."
+      ],
+      "cot": false,
+      "sample_docs_n": 3,
+      "include_indexes": true,
+      "retrieve_k": 0,
+      "replay_train_answers": false,
+      "tools": ["find", "aggregate", "count"]
+    }
+  },
+  {
+    "strategy": "return exactly what was asked for",
+    "reasoning": "Several answers are right in substance but return the wrong set of fields or the wrong number of rows. Making the output shape explicit in the rules should fix that class of mistake without touching anything else.",
+    "config": {
+      "system_prompt": "You are an expert MongoDB developer. Given the schema of a database and a question in plain language, you write one read-only MongoDB query that answers the question.\nReply with the executable query only. No explanation, no prose, no markdown fences.\nAllowed shapes:\n  db.<collection>.find(<filter>, <projection>).sort(<spec>).limit(<n>)\n  db.<collection>.aggregate([<stages>])\n  db.<collection>.countDocuments(<filter>)\nUse Extended JSON for dates and identifiers.",
+      "rules": [
+        "Return exactly the fields the question asks about: no extra fields, and no identifier unless it was asked for.",
+        "When the question asks for a number of items, make the result have that many rows: a limit for a list, a count for \"how many\".",
+        "When the question asks for the top N by some measure, sort on that measure and add a second sort key so the order is fully determined.",
+        "Use the operator that matches the question: $gt/$gte/$lt/$lte for ranges, $in for membership, $regex with $options for text patterns."
+      ],
+      "cot": false,
+      "sample_docs_n": 0,
+      "include_indexes": false,
+      "retrieve_k": 0,
+      "replay_train_answers": false,
+      "tools": ["find", "aggregate", "count"]
+    }
+  }
+]
