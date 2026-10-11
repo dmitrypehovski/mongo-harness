@@ -1,0 +1,143 @@
+{
+  "summary": {
+    "database": "sample_mflix",
+    "collections": [
+      "theaters"
+    ],
+    "candidates": 16,
+    "kept": 11,
+    "clarified": 3,
+    "dropped": 5,
+    "drop_reasons": {
+      "the same question was already asked": 5
+    },
+    "families": [
+      "aggregate",
+      "count",
+      "find"
+    ]
+  },
+  "kept": [
+    {
+      "id": "g04",
+      "split": "train",
+      "family": "find",
+      "question": "Which theaters are located in Minnesota or Wisconsin? List them in order by theater ID. Return whole documents, without limiting the fields.",
+      "reference": "db.theaters.find({ \"location.address.state\": { \"$in\": [\"MN\", \"WI\"] } }).sort({ \"theaterId\": 1, \"_id\": 1 })",
+      "clarified": "said the answer is whole documents",
+      "rows": 79
+    },
+    {
+      "id": "g05",
+      "split": "holdout",
+      "family": "find",
+      "question": "Show me the theaters whose theaterId is between 1000 and 1050 inclusive, sorted by theaterId.",
+      "reference": "db.theaters.find({ \"theaterId\": { \"$gte\": 1000, \"$lte\": 1050 } }).sort({ \"theaterId\": 1, \"_id\": 1 })",
+      "clarified": "",
+      "rows": 43
+    },
+    {
+      "id": "g02",
+      "split": "train",
+      "family": "count",
+      "question": "How many theaters are in the state of California?",
+      "reference": "db.theaters.countDocuments({ \"location.address.state\": \"CA\" })",
+      "clarified": "",
+      "rows": 1
+    },
+    {
+      "id": "g01",
+      "split": "train",
+      "family": "aggregate",
+      "question": "How many theaters does each state have, ordered from the state with the most theaters to the one with the fewest? Return each row with the keys `_id`, `theaterCount`.",
+      "reference": "db.theaters.aggregate([ { \"$group\": { \"_id\": \"$location.address.state\", \"theaterCount\": { \"$sum\": 1 } } }, { \"$sort\": { \"theaterCount\": -1, \"_id\": 1 } } ])",
+      "clarified": "named the keys of each row",
+      "rows": 52
+    },
+    {
+      "id": "g06",
+      "split": "train",
+      "family": "find",
+      "question": "Which theaters are located in Bloomington, Minnesota? List each theater's ID, street address, and zip code, ordered by theater ID.",
+      "reference": "db.theaters.find({ \"location.address.city\": \"Bloomington\", \"location.address.state\": \"MN\" }, { _id: 0, theaterId: 1, \"location.address.street1\": 1, \"location.address.zipcode\": 1 }).sort({ theaterId: 1, _id: 1 })",
+      "clarified": "",
+      "rows": 1
+    },
+    {
+      "id": "g07",
+      "split": "holdout",
+      "family": "find",
+      "question": "Show me all theaters in Minnesota, Wisconsin, or Iowa. For each one, give the theater ID, city, and state, sorted by state and then by theater ID.",
+      "reference": "db.theaters.find({ \"location.address.state\": { $in: [\"MN\", \"WI\", \"IA\"] } }, { _id: 0, theaterId: 1, \"location.address.city\": 1, \"location.address.state\": 1 }).sort({ \"location.address.state\": 1, theaterId: 1, _id: 1 })",
+      "clarified": "",
+      "rows": 93
+    },
+    {
+      "id": "g08",
+      "split": "train",
+      "family": "find",
+      "question": "Which theaters are located in Minnesota or Wisconsin? List them alphabetically by city, and if two theaters share a city, order them by theater ID. Return whole documents, without limiting the fields.",
+      "reference": "db.theaters.find({\"location.address.state\": {\"$in\": [\"MN\", \"WI\"]}}).sort({\"location.address.city\": 1, \"theaterId\": 1, \"_id\": 1})",
+      "clarified": "said the answer is whole documents",
+      "rows": 79
+    },
+    {
+      "id": "g09",
+      "split": "holdout",
+      "family": "find",
+      "question": "Find all theaters located west of the -120 longitude line (their longitude coordinate is less than -120), ordered from furthest west to east.",
+      "reference": "db.theaters.find({\"location.geo.coordinates.0\": {\"$lt\": -120}}).sort({\"location.geo.coordinates.0\": 1, \"_id\": 1})",
+      "clarified": "",
+      "rows": 113
+    },
+    {
+      "id": "g10",
+      "split": "train",
+      "family": "find",
+      "question": "Which theaters are located in Minnesota? List each theater's ID and address, ordered by theater ID.",
+      "reference": "db.theaters.find({ \"location.address.state\": \"MN\" }, { \"theaterId\": 1, \"location.address\": 1 }).sort({ \"theaterId\": 1, \"_id\": 1 })",
+      "clarified": "",
+      "rows": 44
+    },
+    {
+      "id": "g11",
+      "split": "holdout",
+      "family": "find",
+      "question": "Show the theater ID and street address for every theater in Bloomington, Minneapolis, or Saint Paul, sorted by city name and then by theater ID.",
+      "reference": "db.theaters.find({ \"location.address.city\": { \"$in\": [\"Bloomington\", \"Minneapolis\", \"Saint Paul\"] } }, { \"theaterId\": 1, \"location.address.city\": 1, \"location.address.street1\": 1 }).sort({ \"location.address.city\": 1, \"theaterId\": 1, \"_id\": 1 })",
+      "clarified": "",
+      "rows": 13
+    },
+    {
+      "id": "g03",
+      "split": "holdout",
+      "family": "count",
+      "question": "How many theaters have a theater ID of 1200 or higher?",
+      "reference": "db.theaters.countDocuments({ \"theaterId\": { \"$gte\": 1200 } })",
+      "clarified": "",
+      "rows": 1
+    }
+  ],
+  "dropped": [
+    {
+      "question": "How many theaters are in California?",
+      "reason": "the same question was already asked"
+    },
+    {
+      "question": "How many theaters are in each state? List the states from the one with the most theaters to the one with the fewest.",
+      "reason": "the same question was already asked"
+    },
+    {
+      "question": "How many theaters does each state have? Show the states with the most theaters first, and break ties alphabetically by state name.",
+      "reason": "the same question was already asked"
+    },
+    {
+      "question": "How many theaters are in the state of California?",
+      "reason": "the same question was already asked"
+    },
+    {
+      "question": "How many theaters are in each state? Order the states from most theaters to fewest, and break ties alphabetically by state name.",
+      "reason": "the same question was already asked"
+    }
+  ]
+}

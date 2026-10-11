@@ -121,6 +121,7 @@ def validate(pack: Pack) -> list[str]:
 def write(pack: Pack, path: str | Path) -> Path:
     """Write a pack back out, e.g. after generating reference answers elsewhere."""
     location = Path(path)
+    location.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "name": pack.name,
         "database": pack.database,

@@ -155,15 +155,30 @@ The MCP surface is intentionally **outside** the agent's loop. Handing the agent
 protocol that can reach every collection would make it impossible to show that it cannot
 widen its own access, which is the claim `bash demo/gate_proof.sh` exists to prove.
 
-## Running it on another dataset
+## Running it on your own data
 
-The questions, the reference answers and the instrument probes are the only parts of this
-project that are specific to `sample_mflix`; the gate, the audit and the adapter are not.
-`mh/datasets.py` and `datasets/` are the start of that separation: a pack is a JSON file
-listing questions with reference queries, validated before anything is measured with it
-(`python -m mh.cli run` still runs the film suite — the packs are groundwork here, not
-wired into the command line yet, and nothing about the working path was changed to add
-them).
+The gate, the audit and the adapter know nothing about films. What is specific to a dataset is
+its questions, their reference answers, and the probes that check the instrument against that
+collection. A dataset pack holds those, and the harness can also **write the exam itself** —
+then throw away most of it:
+
+```bash
+python -m mh.cli scaffold-dataset --database shop --collections orders --want 14 --out datasets/shop.json
+python -m mh.cli run --dataset datasets/shop.json --show-failures
+```
+
+Every generated question is checked against the real collection before it is kept: the query must
+run, must be read-only, and **must return the same answer twice** — a question whose answer drifts
+cannot judge anything. Questions that disagree with their own reference about the shape of the
+answer are refused too, because an exam that marks an agent wrong for a field name the question
+never mentioned teaches it to guess the reference author's habits instead of answering.
+
+Measured on a collection the harness had never seen (`theaters`, 1,564 documents in the same
+cluster): 14 questions proposed, 7 kept, 7 refused with the reason printed — 3 repeats, 2 field
+names the question never asked for, 2 references returning whole documents when the question named
+fields.
+
+Full instructions, the pack format and the edges that are not general yet: **[DATASETS.md](DATASETS.md)**.
 
 ## Use this gate in your own harness
 

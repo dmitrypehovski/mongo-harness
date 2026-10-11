@@ -3,7 +3,7 @@
   "matched_by": "",
   "task_id": "a06",
   "measured": true,
-  "ms": 1879,
+  "ms": 2509,
   "query": "db.movies.countDocuments({ cast: { $size: 1 } })",
   "rows": 1,
   "status": "ok",

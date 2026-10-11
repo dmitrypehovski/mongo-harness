@@ -15,6 +15,8 @@ redrawing the boundary.
 
 from __future__ import annotations
 
+import hashlib
+
 TASKS: list[dict] = [
     # ---------- family: find + filters ----------
     {
@@ -631,6 +633,35 @@ TASKS: list[dict] = [
         "reference": 'db.movies.countDocuments({"runtime": 90, "imdb.rating": {"$gt": 7}})',
     },
 ]
+
+
+#: The suite as it ships, kept so the built-in questions can be restored.
+_BUILTIN: list[dict] = list(TASKS)
+
+
+def use_pack(pack_tasks: list[dict]) -> None:
+    """Point the harness at another dataset's questions.
+
+    The shipped list is mutated in place rather than rebound, so the modules that imported
+    ``TASKS`` see the change without being re-imported.
+    """
+    TASKS[:] = list(pack_tasks)
+
+
+def reset_pack() -> None:
+    """Go back to the questions this repository ships with."""
+    TASKS[:] = list(_BUILTIN)
+
+
+def pack_name() -> str:
+    """What to call the active question set in the record."""
+    return "sample_mflix" if TASKS == _BUILTIN else "generated"
+
+
+def pack_key() -> str:
+    """A short fingerprint of the active questions, used to key caches."""
+    payload = "|".join(f"{task.get('id')}:{task.get('reference')}" for task in TASKS)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 
 
 def by_split(split: str) -> list[dict]:

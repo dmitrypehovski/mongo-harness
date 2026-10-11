@@ -232,6 +232,43 @@ def replay_lookup(task: dict, bank: list[dict]) -> dict | None:
     return best[1] if best else None
 
 
+def extract_query(raw: str) -> str:
+    """The query inside the model's answer, whatever else came with it.
+
+    Models wrap the query in markdown fences, open with a sentence, and break it across lines.
+    Taking the last line of the answer — which is what this used to do — turns a perfectly good
+    multi-line query into ``])``, and the harness then records a failure that belongs to the
+    extractor rather than to the model. So the query is cut out properly instead: from the first
+    ``db.`` to the point where its brackets balance, continuing past that point while the answer
+    is still chaining another call (``.sort()``, ``.limit()``).
+    """
+    text = re.sub(r"```[a-zA-Z]*", " ", raw or "").replace("`", " ")
+    start = text.find("db.")
+    if start == -1:
+        return text.strip()
+
+    depth, quote, escaped = 0, "", False
+    for index in range(start, len(text)):
+        character = text[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = ""
+            continue
+        if character in "\"'":
+            quote = character
+        elif character in "([{":
+            depth += 1
+        elif character in ")]}":
+            depth -= 1
+            if depth <= 0 and not re.match(r"\s*\.", text[index + 1 :]):
+                return text[start : index + 1].strip()
+    return text[start:].strip()
+
+
 def solve(config: dict, task: dict, db, lessons: list[dict], bank: list[dict] | None = None) -> dict:
     """Answer one question under one harness version.
 
@@ -266,14 +303,15 @@ def solve(config: dict, task: dict, db, lessons: list[dict], bank: list[dict] | 
                 "reason": f"the model could not be reached: {str(exc)[:120]}",
             }
 
+    query_text = extract_query(raw)
     try:
-        mql = scorer.parse_mql(raw)
+        mql = scorer.parse_mql(query_text)
     except scorer.ParseError as exc:
         return {
             "task_id": task["id"],
             "question": task["question"],
             "raw": raw[:600],
-            "query": raw.strip()[:600],
+            "query": query_text[:600],
             "status": "invalid_query",
             "error": str(exc)[:300],
             "passed": False,
@@ -287,7 +325,7 @@ def solve(config: dict, task: dict, db, lessons: list[dict], bank: list[dict] | 
         "question": task["question"],
         "raw": raw[:600],
         "query": mql.canonical(),
-        "readable_query": raw.strip().splitlines()[-1][:400] if raw.strip() else "",
+        "readable_query": " ".join(query_text.split())[:400],
         "status": execution.status,
         "error": execution.error[:300],
         "rows": len(execution.rows),

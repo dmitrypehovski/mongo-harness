@@ -126,9 +126,34 @@ def _insert_one(collection_name: str, doc: dict, db: Optional[Database] = None) 
     return str(result.inserted_id)
 
 
+def dataset_query(extra: dict | None = None) -> dict:
+    """A query for runs belonging to the question set that is active right now.
+
+    Two datasets otherwise write into one ledger indistinguishable from each other, and the
+    later measurement silently becomes the record of the earlier one — which is exactly what
+    happened the first time a second dataset was measured here: an exam over a different
+    collection overwrote the film figures the project page was showing.
+    """
+    from mh import tasks
+
+    query = dict(extra or {})
+    query["dataset.key"] = tasks.pack_key()
+    return query
+
+
 def record_run(doc: dict) -> str:
-    """Insert a run document; return inserted id as str."""
+    """Insert a run document; return inserted id as str.
+
+    Every run is stamped with a fingerprint of the question set it measured, so a run can never
+    be read as a measurement of some other exam.
+    """
+    from mh import tasks
+
     payload = dict(doc)
+    payload.setdefault(
+        "dataset",
+        {"key": tasks.pack_key(), "questions": len(tasks.TASKS), "name": tasks.pack_name()},
+    )
     if "started_at" not in payload:
         payload["started_at"] = _utc_now()
     return _insert_one("runs", payload)

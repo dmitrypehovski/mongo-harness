@@ -93,7 +93,9 @@ def state() -> dict:
     rates = {}
     for split in ("train", "holdout"):
         latest = list(
-            db.runs.find({"version_id": version_id, "suite": split}).sort("started_at", -1).limit(1)
+            db.runs.find(store.dataset_query({"version_id": version_id, "suite": split}))
+            .sort("started_at", -1)
+            .limit(1)
         )
         if latest:
             rates[split] = {

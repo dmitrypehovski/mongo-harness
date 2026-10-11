@@ -71,6 +71,11 @@ def order_sensitive(task: dict) -> bool:
     return scorer._sorts(parsed)
 
 
+def reset_dataset_caches() -> None:
+    """Forget the reference rows and answers computed for the previous question set."""
+    _EXPECTED_ROWS.clear()
+
+
 def expected_answers(db, refresh: bool = False) -> dict[str, dict]:
     """Reference answer for every task, cached on disk.
 
@@ -80,7 +85,7 @@ def expected_answers(db, refresh: bool = False) -> dict[str, dict]:
     :func:`mh.scorer.compare`.
     """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache_file = CACHE_DIR / "expected.json"
+    cache_file = CACHE_DIR / f"expected-{tasks.pack_key()}.json"
     if cache_file.exists() and not refresh:
         cached = json.loads(cache_file.read_text(encoding="utf-8"))
         if len(cached) == len(tasks.TASKS) and all("drop_id" in value for value in cached.values()):

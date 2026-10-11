@@ -11,22 +11,22 @@
   },
   "rates": {
     "train": {
-      "passed": 23,
+      "passed": 24,
       "total": 32,
-      "rate": 0.7188,
-      "at": "2026-10-11T20:21:48.617000+00:00"
+      "rate": 0.75,
+      "at": "2026-10-11T23:20:35.321000+00:00"
     },
     "holdout": {
-      "passed": 19,
+      "passed": 20,
       "total": 25,
-      "rate": 0.76,
-      "at": "2026-10-11T20:22:24.134000+00:00"
+      "rate": 0.8,
+      "at": "2026-10-11T23:21:25.717000+00:00"
     }
   },
   "counts": {
-    "runs": 17,
-    "steps": 467,
-    "lessons": 119,
+    "runs": 29,
+    "steps": 570,
+    "lessons": 143,
     "edits": 5
   },
   "edits": [
@@ -117,6 +117,18 @@
     }
   ],
   "reviews": [
+    {
+      "decision": "override",
+      "note": "",
+      "strategy": "learn from the questions it keeps getting wrong",
+      "at": "2026-10-11T22:58:13.299000+00:00"
+    },
+    {
+      "decision": "uphold",
+      "note": "",
+      "strategy": "learn from the questions it keeps getting wrong",
+      "at": "2026-10-11T22:58:11.896000+00:00"
+    },
     {
       "decision": "override",
       "note": "",

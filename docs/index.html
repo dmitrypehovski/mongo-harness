@@ -85,6 +85,14 @@
 
   <div class="numbers" id="numbers"></div>
 
+  <div class="note" style="margin-top:14px">
+    These two rates are higher than the ones this page carried at submission, and the reason is
+    worth stating: the harness used to take the last line of the model's answer as the query, so a
+    multi-line query was reduced to <code>])</code> and the failure was recorded against the agent.
+    With the extraction fixed, the same version measures 75.0% and 80.0% on the same questions. The
+    agent did not improve; the measuring did, and it had been blaming the wrong side.
+  </div>
+
   <h2>The ledger: five proposals, five refusals</h2>
   <div id="ledger"></div>
 
@@ -106,6 +114,22 @@
     <figure class="shot"><img src="app-typed.png" alt="a question typed in" /><figcaption>a question typed in plain language</figcaption></figure>
     <figure class="shot"><img src="app-answered.png" alt="the answer" /><figcaption>the answer: query written, rows compared with the reference, verdict given</figcaption></figure>
   </div>
+
+  <h2>The exam it writes for itself</h2>
+  <p class="lede" style="margin-top:0">
+    The film questions were written by hand, which is no use to anyone with a different database.
+    So the harness was pointed at a collection it had never seen — 1,564 theatres in the same
+    cluster — and asked to write its own exam. It proposed questions with reference queries, ran
+    every reference twice against the real collection, and threw away what did not survive: a
+    question whose answer drifts between two runs cannot judge anything. Questions that the
+    reference would have marked wrong for a field name the question never mentioned were made
+    precise rather than dropped, because an exam that punishes a guess at the author's habits
+    teaches the wrong thing.
+  </p>
+  <div class="numbers" id="exam-numbers"></div>
+  <div id="exam-kept"></div>
+  <h2>What it refused, and why</h2>
+  <div id="exam-refused"></div>
 
   <h2>The live one</h2>
   <p class="lede" style="margin-top:0">
@@ -138,6 +162,40 @@
 <script>
 const pct = (v) => (v === null || v === undefined ? "—" : (v * 100).toFixed(1) + "%");
 const esc = (s) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+const words = { train: "selection set", holdout: "verification set" };
+
+fetch("exam.json").then((r) => r.json()).then((exam) => {
+  const s = exam.summary;
+  document.getElementById("exam-numbers").innerHTML =
+    `<div><i>questions proposed</i><b>${s.candidates}</b>against ${esc(exam.database)}</div>` +
+    `<div><i>kept, verified twice</i><b>${s.kept}</b>${s.clarified} of them made precise</div>` +
+    `<div><i>refused</i><b>${s.dropped}</b>with the reason printed</div>` +
+    Object.entries(exam.rates).map(([split, r]) =>
+      `<div><i>${words[split] || split}</i><b>${(r.rate * 100).toFixed(1)}%</b>${r.passed}/${r.total}</div>`
+    ).join("");
+
+  document.getElementById("exam-kept").innerHTML = exam.kept.map((task) =>
+    `<div class="row">
+      <div>
+        <h3>${esc(task.question)}</h3>
+        <span class="cell">${esc(task.id)} · ${esc(task.split)} · ${esc(task.family)}${task.clarified ? " · " + esc(task.clarified) : ""}</span>
+      </div>
+      <div class="cell">${task.rows} rows</div>
+      <div class="cell"></div>
+      <div class="why">${esc(task.reference)}</div>
+    </div>`
+  ).join("");
+
+  document.getElementById("exam-refused").innerHTML = exam.dropped.map((item) =>
+    `<div class="row">
+      <div><h3>${esc(item.question)}</h3></div>
+      <div class="cell"></div>
+      <div class="cell"></div>
+      <div class="why"><span class="stamp">refused</span> ${esc(item.reason)}</div>
+    </div>`
+  ).join("");
+});
 
 Promise.all([
   fetch("state.json").then((r) => r.json()),

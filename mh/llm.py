@@ -45,15 +45,15 @@ class ModelError(RuntimeError):
     """Raised when the model could not be reached after every retry."""
 
 
-def chat(
+def chat_raw(
     messages: list[dict],
     model: str | None = None,
     temperature: float = 0.2,
     max_tokens: int = 1500,
     retries: int = 3,
     timeout: int = 120,
-) -> str:
-    """Send a chat completion request and return the assistant text.
+) -> dict:
+    """Send a chat completion request and return the assistant message as it arrived.
 
     Retries on transport errors, rate limits and server errors with exponential
     backoff. Raises :class:`ModelError` when every attempt fails.
@@ -87,7 +87,7 @@ def chat(
             if not choices:
                 last_error = f"no choices in response: {str(data)[:200]}"
                 continue
-            return choices[0].get("message", {}).get("content", "") or ""
+            return choices[0].get("message", {})
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")[:300]
             last_error = f"HTTP {exc.code}: {detail}"
@@ -98,3 +98,40 @@ def chat(
         if attempt < retries:
             time.sleep(min(2 ** attempt, 12))
     raise ModelError(f"model {model or default_model()} failed after {retries} attempts: {last_error}")
+
+
+def message_text(message: dict) -> str:
+    """The assistant's answer, from the content channel or, failing that, the reasoning one.
+
+    Some reasoning models return an empty content field when they spend their output budget
+    thinking, while still having written the answer inside the reasoning channel. Reading it
+    back is the difference between a usable answer and a wasted call.
+    """
+    content = (message.get("content") or "").strip()
+    if content:
+        return content
+    reasoning = (message.get("reasoning") or "").strip()
+    if reasoning:
+        log.warning("the model returned no content; reading the reasoning channel instead")
+        return reasoning
+    return ""
+
+
+def chat(
+    messages: list[dict],
+    model: str | None = None,
+    temperature: float = 0.2,
+    max_tokens: int = 1500,
+    retries: int = 3,
+    timeout: int = 120,
+) -> str:
+    """Send a chat completion request and return the assistant text."""
+    message = chat_raw(
+        messages,
+        model=model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        retries=retries,
+        timeout=timeout,
+    )
+    return message_text(message)

@@ -19,7 +19,7 @@ import os
 import sys
 from pathlib import Path
 
-from mh import agent, loop, ruler, scorer, store, tasks
+from mh import agent, datasets, loop, ruler, scaffold, scorer, store, tasks
 
 LINE = "-" * 78
 
@@ -38,6 +38,24 @@ def _database():
     uri = os.environ.get("MONGODB_URI", "mongodb://localhost:27017")
     name = os.environ.get("MH_MFLIX_DB", "sample_mflix")
     return scorer.connect(uri).get_database(name)
+
+
+def apply_dataset(args) -> None:
+    """Point the harness at another dataset, if one was named.
+
+    The question set, the database it is asked against and the cached reference answers all
+    have to move together, which is why this is one call rather than three.
+    """
+    path = getattr(args, "dataset", None) or os.environ.get("MH_DATASET")
+    if not path:
+        return
+    pack = datasets.load(path)
+    tasks.use_pack(pack.tasks)
+    loop.reset_dataset_caches()
+    if pack.database:
+        os.environ["MH_MFLIX_DB"] = pack.database
+    print(f"dataset: {pack.name} · {len(pack.tasks)} questions · database {pack.database or '(from the environment)'}")
+    print(f"         {json.dumps(pack.summary(), ensure_ascii=False)}")
 
 
 def _banner(title: str) -> None:
@@ -71,7 +89,11 @@ def command_status(args) -> int:
 
     for split in ("train", "holdout"):
         latest = list(
-            database.runs.find({"version_id": version["version_id"], "suite": split}).sort("started_at", -1).limit(1)
+            database.runs.find(
+                store.dataset_query({"version_id": version["version_id"], "suite": split})
+            )
+            .sort("started_at", -1)
+            .limit(1)
         )
         if latest:
             run = latest[0]
@@ -230,22 +252,81 @@ def command_audit_ruler(args) -> int:
     return 1 if ruler.defects(outcomes) else 0
 
 
+def command_scaffold_dataset(args) -> int:
+    """Write an exam for a database nobody wrote questions for.
+
+    Everything the model proposes is run twice against the real collection first; the
+    questions whose answers move are dropped, and the pack only contains what survived.
+    """
+    db = scorer.connect().get_database(args.database)
+    collections = [name.strip() for name in (args.collections or "").split(",") if name.strip()]
+    report = scaffold.build(
+        db, args.database, collections or None, want=args.want, model=args.model
+    )
+    print(json.dumps(report.summary(), indent=2, ensure_ascii=False))
+
+    for candidate in report.dropped:
+        print(f"  refused · {candidate.reason} · {candidate.question[:72]}")
+
+    if not report.kept:
+        print("nothing survived verification, so no pack was written")
+        return 1
+
+    path = scaffold.write_pack(report, args.out)
+    print(f"wrote {path}")
+
+    if args.report:
+        payload = {
+            "summary": report.summary(),
+            "kept": [
+                {
+                    "id": candidate.id,
+                    "split": getattr(candidate, "split", ""),
+                    "family": candidate.family,
+                    "question": candidate.question,
+                    "reference": candidate.reference,
+                    "clarified": candidate.clarified,
+                    "rows": candidate.rows,
+                }
+                for candidate in report.kept
+            ],
+            "dropped": [
+                {"question": candidate.question, "reason": candidate.reason}
+                for candidate in report.dropped
+            ],
+        }
+        Path(args.report).write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        print(f"wrote {args.report}")
+    print(f"measure against it with: python -m mh.cli run --dataset {path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser."""
     parser = argparse.ArgumentParser(prog="mh", description="the harness that earns its edits")
     parser.add_argument("--verbose", action="store_true", help="log model and database calls")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    dataset_help = (
+        "path to a dataset pack of your own questions; without it the shipped "
+        "sample_mflix suite is used (or set MH_DATASET)"
+    )
+
     init = sub.add_parser("init", help="prepare collections and reference answers")
     init.add_argument("--refresh", action="store_true", help="recompute the cached reference answers")
+    init.add_argument("--dataset", help=dataset_help)
     init.set_defaults(func=command_init)
 
     status = sub.add_parser("status", help="show the current version")
+    status.add_argument("--dataset", help=dataset_help)
     status.set_defaults(func=command_status)
 
     run = sub.add_parser("run", help="measure the current version")
     run.add_argument("--split", choices=["train", "holdout"])
     run.add_argument("--show-failures", action="store_true")
+    run.add_argument("--dataset", help=dataset_help)
     run.set_defaults(func=command_run)
 
     for name, function, help_text in (
@@ -254,6 +335,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("demo", command_demo, "run the scripted demonstration"),
     ):
         sub_parser = sub.add_parser(name, help=help_text)
+        sub_parser.add_argument("--dataset", help=dataset_help)
         sub_parser.add_argument("--want", type=int, default=4, help="how many proposals to ask for")
         sub_parser.add_argument("--forced", help="JSON file with a seeded list of proposals")
         if name == "loop":
@@ -275,6 +357,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="fault injection for the detector: 'regex' or 'oid' disables part of the parser",
     )
     ruler_parser.set_defaults(func=command_audit_ruler)
+
+    scaffolder = sub.add_parser(
+        "scaffold-dataset",
+        help="write an exam for a database the harness has not seen",
+    )
+    scaffolder.add_argument("--database", required=True, help="database to write questions about")
+    scaffolder.add_argument("--collections", help="comma separated; default: the largest three")
+    scaffolder.add_argument("--want", type=int, default=12, help="how many questions to ask for")
+    scaffolder.add_argument("--out", required=True, help="where to write the dataset pack")
+    scaffolder.add_argument("--report", help="where to write the machine readable report")
+    scaffolder.add_argument("--model", help="override the model that writes the questions")
+    scaffolder.set_defaults(func=command_scaffold_dataset)
     return parser
 
 
@@ -283,6 +377,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     _setup_logging(args.verbose)
+    if args.command != "scaffold-dataset":
+        apply_dataset(args)
     return args.func(args)
 
 

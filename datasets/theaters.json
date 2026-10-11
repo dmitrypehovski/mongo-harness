@@ -1,0 +1,95 @@
+{
+  "name": "sample_mflix",
+  "database": "sample_mflix",
+  "description": "generated from sample_mflix and verified against it",
+  "tasks": [
+    {
+      "id": "g04",
+      "family": "find",
+      "split": "train",
+      "collection": "theaters",
+      "question": "Which theaters are located in Minnesota or Wisconsin? List them in order by theater ID. Return whole documents, without limiting the fields.",
+      "reference": "db.theaters.find({ \"location.address.state\": { \"$in\": [\"MN\", \"WI\"] } }).sort({ \"theaterId\": 1, \"_id\": 1 })"
+    },
+    {
+      "id": "g05",
+      "family": "find",
+      "split": "holdout",
+      "collection": "theaters",
+      "question": "Show me the theaters whose theaterId is between 1000 and 1050 inclusive, sorted by theaterId.",
+      "reference": "db.theaters.find({ \"theaterId\": { \"$gte\": 1000, \"$lte\": 1050 } }).sort({ \"theaterId\": 1, \"_id\": 1 })"
+    },
+    {
+      "id": "g02",
+      "family": "count",
+      "split": "train",
+      "collection": "theaters",
+      "question": "How many theaters are in the state of California?",
+      "reference": "db.theaters.countDocuments({ \"location.address.state\": \"CA\" })"
+    },
+    {
+      "id": "g01",
+      "family": "aggregate",
+      "split": "train",
+      "collection": "theaters",
+      "question": "How many theaters does each state have, ordered from the state with the most theaters to the one with the fewest? Return each row with the keys `_id`, `theaterCount`.",
+      "reference": "db.theaters.aggregate([ { \"$group\": { \"_id\": \"$location.address.state\", \"theaterCount\": { \"$sum\": 1 } } }, { \"$sort\": { \"theaterCount\": -1, \"_id\": 1 } } ])"
+    },
+    {
+      "id": "g06",
+      "family": "find",
+      "split": "train",
+      "collection": "theaters",
+      "question": "Which theaters are located in Bloomington, Minnesota? List each theater's ID, street address, and zip code, ordered by theater ID.",
+      "reference": "db.theaters.find({ \"location.address.city\": \"Bloomington\", \"location.address.state\": \"MN\" }, { _id: 0, theaterId: 1, \"location.address.street1\": 1, \"location.address.zipcode\": 1 }).sort({ theaterId: 1, _id: 1 })"
+    },
+    {
+      "id": "g07",
+      "family": "find",
+      "split": "holdout",
+      "collection": "theaters",
+      "question": "Show me all theaters in Minnesota, Wisconsin, or Iowa. For each one, give the theater ID, city, and state, sorted by state and then by theater ID.",
+      "reference": "db.theaters.find({ \"location.address.state\": { $in: [\"MN\", \"WI\", \"IA\"] } }, { _id: 0, theaterId: 1, \"location.address.city\": 1, \"location.address.state\": 1 }).sort({ \"location.address.state\": 1, theaterId: 1, _id: 1 })"
+    },
+    {
+      "id": "g08",
+      "family": "find",
+      "split": "train",
+      "collection": "theaters",
+      "question": "Which theaters are located in Minnesota or Wisconsin? List them alphabetically by city, and if two theaters share a city, order them by theater ID. Return whole documents, without limiting the fields.",
+      "reference": "db.theaters.find({\"location.address.state\": {\"$in\": [\"MN\", \"WI\"]}}).sort({\"location.address.city\": 1, \"theaterId\": 1, \"_id\": 1})"
+    },
+    {
+      "id": "g09",
+      "family": "find",
+      "split": "holdout",
+      "collection": "theaters",
+      "question": "Find all theaters located west of the -120 longitude line (their longitude coordinate is less than -120), ordered from furthest west to east.",
+      "reference": "db.theaters.find({\"location.geo.coordinates.0\": {\"$lt\": -120}}).sort({\"location.geo.coordinates.0\": 1, \"_id\": 1})"
+    },
+    {
+      "id": "g10",
+      "family": "find",
+      "split": "train",
+      "collection": "theaters",
+      "question": "Which theaters are located in Minnesota? List each theater's ID and address, ordered by theater ID.",
+      "reference": "db.theaters.find({ \"location.address.state\": \"MN\" }, { \"theaterId\": 1, \"location.address\": 1 }).sort({ \"theaterId\": 1, \"_id\": 1 })"
+    },
+    {
+      "id": "g11",
+      "family": "find",
+      "split": "holdout",
+      "collection": "theaters",
+      "question": "Show the theater ID and street address for every theater in Bloomington, Minneapolis, or Saint Paul, sorted by city name and then by theater ID.",
+      "reference": "db.theaters.find({ \"location.address.city\": { \"$in\": [\"Bloomington\", \"Minneapolis\", \"Saint Paul\"] } }, { \"theaterId\": 1, \"location.address.city\": 1, \"location.address.street1\": 1 }).sort({ \"location.address.city\": 1, \"theaterId\": 1, \"_id\": 1 })"
+    },
+    {
+      "id": "g03",
+      "family": "count",
+      "split": "holdout",
+      "collection": "theaters",
+      "question": "How many theaters have a theater ID of 1200 or higher?",
+      "reference": "db.theaters.countDocuments({ \"theaterId\": { \"$gte\": 1200 } })"
+    }
+  ]
+}
