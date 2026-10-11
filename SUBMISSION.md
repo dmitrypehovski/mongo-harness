@@ -1,8 +1,9 @@
 # Submission pack
 
 Everything needed to hand this in, and the exact order to do it in.
-Submission deadline: **5:00PM PT**. Deliverables: public repository, a one minute
-video recorded today, and a short project description.
+Submission deadline: **5:00PM PT**, through the Cerebral Valley form. Deliverables:
+a link to a public repository, a one minute video recorded today with video and audio,
+and a short description.
 
 ## 1. Atlas (required for the finals)
 
@@ -33,54 +34,57 @@ answers can be computed. Verified on the cluster: 21,349 movies, 41,079 comments
 
 ## 2. Public repository
 
-The repository is committed locally at `/root/hack/mongo-harness` (25 files). It has
-to be public for the submission. GitHub is not authenticated on this machine, so
-whichever is easier for you:
-
-* run `gh auth login` yourself and I will create and push the repository, or
-* tell me and I will start the device login flow here: you get a short code, you
-  approve it on your phone, exactly like the Cursor login earlier.
+**Done and verified:** <https://github.com/dmitrypehovski/mongo-harness> — public, read
+anonymously with no token (HTTP 200), 84 files, 6 commits, `main` in sync with local
+`HEAD`, README readable without authentication. No secret is present in any commit.
 
 ## 3. The one minute video
 
-Record on site, today, with sound. Screen plus voice is enough. Suggested shots:
+The full script, second by second, is in **`demo/VIDEO_60S.md`**. Two things it settles
+that are easy to get wrong:
 
-| time | what is on screen | what to say |
-|---|---|---|
-| 0:00–0:10 | Atlas UI → **Browse Collections** → `harness.versions` | a version of this harness is a document in MongoDB; everything it can change about itself lives in that document |
-| 0:10–0:20 | `python -m mh.cli run` on the cluster | it answers 57 plain-language questions about sample_mflix and is scored on the rows it returns, never on the text of the query |
-| 0:20–0:35 | `python -m mh.cli edits` — the ledger, down to the refusals | it proposed five changes to itself; the gate refused all five, and each refusal carries its numbers |
-| 0:35–0:50 | `bash demo/gate_proof.sh` — the crippled run | with the aggregation tool revoked the harness falls to 19%, 47 questions refused; it asks for the tool back and the envelope says no; a human grants it, not the harness |
-| 0:50–0:58 | Atlas UI → **Search & Vector Search** → `lessons_vec` | it remembers its own past failures through a vector index on the cluster |
-| 0:58–1:00 | `python -m mh.cli rollback` | every promotion is reversible with one command |
+* the spoken lines are in English, 148 words, and fit the minute at demo pace;
+* the two commands it depends on were timed against the cluster: `mh.cli status` 3.1s,
+  `mh.cli edits` 2.5s, so both are safe to run live.
 
-The ledger commands read MongoDB, so they are instant and safe to run live. The two
-guards in the fourth shot are the reason the rest is worth believing: no language
-model decides those outcomes.
+The rules also require the video to be recorded on site today with working audio, and
+the demo to show only what was built during the event.
 
 ## 4. Description (paste into the submission form)
 
-> **The harness that earns its edits.** A self-improving agent usually edits its own
-> prompt and declares victory, because nothing tests the edit. This harness cannot.
-> A version of it is a document in MongoDB, and a change only becomes current if the
-> gate promotes it. It answers 57 plain-language questions about the sample_mflix
-> dataset by writing MongoDB queries, and is scored on the rows it returns against a
-> reference answer, never on the text of the query. Each generation it reads its own
-> failures back out of Atlas and proposes several new versions of itself. Every one
-> of them faces two checks: an envelope that refuses any edit widening its own tool
-> access or asking for code execution, and a held-out measurement over repeated runs
-> with an exact paired test. In the run recorded in the repository, five plausible
-> strategies were proposed and all five were refused: the memorising one bought
-> +12.5 points on the data the search could see and +2 on the data it could not; the
-> retrieval one made the harness measurably worse; one asked for more power and never
-> ran. The most useful finding was not in the harness at all: the sandbox was
-> rejecting JavaScript regular expressions that mongosh accepts, and repairing that
-> ruler moved the same version from 65.6%/80.0% to 75.0%/88.0% without touching the
-> harness. Every version, run, step, proposal and refusal is in the ledger, and a
-> promotion is undone with one command. Everything in the repository was written
-> during the event, in the hackathon's Atlas sandbox cluster; the only borrowed
-> artefacts are MongoDB's own sample dataset and its published query guidance, both
-> credited in the README.
+> **The harness that earns its edits.** Recursive self-improvement has a failure mode
+> nobody watches: a self-improving agent edits its own prompt, looks better on the
+> examples it can see, and declares victory, because nothing tests the edit. This
+> project is the missing half — a harness whose every self-edit faces a gate that can
+> refuse it, backed by a ledger in MongoDB.
+>
+> A version of the harness is a document in MongoDB, and a change only becomes current
+> if the gate promotes it. It answers 57 plain-language questions about the
+> sample_mflix dataset by writing MongoDB queries, and is scored on the rows it
+> returns against reference answers, never on the text of the query. Each generation
+> it reads its own failures back out of Atlas and proposes several new versions of
+> itself. Every one of them faces two checks: an envelope that refuses any edit
+> widening its own tool access or asking for code execution, and a held-out
+> measurement over repeated runs with an exact paired test.
+>
+> In the recorded generation, five plausible strategies were proposed and all five
+> were refused — the silent failure this project is built to catch. The memorising
+> strategy bought +12.5 points on the data the search could see and +2 on the data it
+> could not, which is overfitting wearing the costume of progress. The retrieval
+> strategy made the harness measurably worse: 78.0% down to 62.0%, p=0.04, a
+> regression no amount of reasoning about it would have predicted. One edit asked for
+> more power and never ran: with its aggregation tool revoked the harness falls to
+> 18.8%, asks for the privilege back, is refused, tries a banned operator instead, and
+> is refused again — a human restores it, the harness cannot.
+>
+> The most useful finding was not in the harness at all: the sandbox was rejecting
+> JavaScript regular expressions that mongosh accepts, so every version was being
+> punished for output the database would have run. Repairing that ruler moved the same
+> version from 65.6%/80.0% to 75.0%/88.0% without touching the harness. Every version,
+> run, step, proposal and refusal is in the ledger, and a promotion is undone with one
+> command. Everything in the repository was written during the event, in the
+> hackathon's Atlas sandbox cluster; the only borrowed artefacts are MongoDB's own
+> sample dataset and its published query guidance, both credited in the README.
 
 ## 5. What is honest about the limits
 
@@ -92,3 +96,11 @@ model decides those outcomes.
   `mh/gate.py`; they are judgement calls, not laws.
 * The harness edits configuration, not code. That is what makes each step auditable,
   and it is also the ceiling.
+* The absolute numbers move between runs at temperature 0, because provider-side
+  nondeterminism survives the setting. The same untouched version measured 68.8% and
+  71.9% on the selection set in different runs; the verdicts on the five proposals did
+  not change. What the gate compares is always candidate against incumbent inside one
+  run.
+* Statement Two's "billions of tokens in one session" is not demonstrated. The ledger
+  currently holds 17 runs, 467 steps and 119 lessons. The mechanism is built to grow
+  with the session; the scale is not claimed.

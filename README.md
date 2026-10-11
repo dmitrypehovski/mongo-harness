@@ -217,6 +217,12 @@ result the harness is built to produce: five plausible ways to improve itself, n
 of them provable, and not one of them taken on the strength of how good the idea
 sounded.
 
+Read that table as the numbers this generation saw, not as fixed constants: the same
+untouched version measures **71.9% on the selection set when the same generation runs
+against Atlas**, and the five verdicts come out identical. What the gate compares is
+always the candidate against the incumbent inside one run, which is why it stays
+right when the absolute numbers move.
+
 Two of the refusals are worth reading twice. The memorising strategy — reuse the
 query that worked on a nearly identical earlier question — bought **+12.5 points on
 the selection set and +2 on the verification set**. It is the exact shape of
