@@ -22,9 +22,32 @@ from mh import store  # noqa: E402
 SCRATCH_DB = "harness_test"
 
 
+def _reachable(uri: str = "mongodb://localhost:27017", timeout_ms: int = 800) -> bool:
+    """Whether a MongoDB is listening, checked quickly and without raising."""
+    from pymongo import MongoClient
+
+    try:
+        MongoClient(uri, serverSelectionTimeoutMS=timeout_ms).admin.command("ping")
+        return True
+    except Exception:
+        return False
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _scratch_db():
-    """Ensure schema for the session; drop the scratch database afterwards."""
+    """Ensure schema for the session; drop the scratch database afterwards.
+
+    These tests exercise the store against a real server and need one on localhost:27017:
+    ``docker run -d -p 27017:27017 mongo:7``, or the service container in
+    ``.github/workflows/tests.yml``. Without one they skip with a reason instead of failing, so
+    the rest of the suite still runs on a laptop with no database — and so a silent skip is
+    visible in the summary rather than hidden.
+    """
+    if not _reachable():
+        pytest.skip(
+            "no MongoDB on mongodb://localhost:27017: start one with "
+            "docker run -d -p 27017:27017 mongo:7 to run the store tests"
+        )
     # Reset cached URI/settings in case other imports ran first.
     config.mongodb_uri.cache_clear()
     os.environ["MONGODB_URI"] = "mongodb://localhost:27017"

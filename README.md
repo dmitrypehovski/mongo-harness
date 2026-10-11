@@ -31,8 +31,12 @@ mh scaffold-dataset --database shop --collections orders --want 14 --out dataset
 mh run --dataset datasets/shop.json --show-failures
 ```
 
-`pytest -q` runs the whole suite with no database, no model key and no embedding model, so it
-is safe to run anywhere.
+`pytest -q` needs no model key and no embedding model. The store tests want a MongoDB on
+`localhost:27017` and skip with a reason without one:
+
+```bash
+docker run -d -p 27017:27017 mongo:7    # then every test runs
+```
 
 ## The idea
 

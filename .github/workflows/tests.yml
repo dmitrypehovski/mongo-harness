@@ -8,6 +8,12 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    services:
+      # the store tests need a real server; without this they skip instead of running
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
     strategy:
       fail-fast: false
       matrix:
@@ -19,7 +25,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install
         run: pip install -e ".[dev]"
-      - name: The suite must pass with no database, no model key and no embedding model
+      - name: The suite must pass with no model key and no embedding model
         run: pytest -q
       - name: The command line must come up
         run: |
