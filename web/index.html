@@ -6,27 +6,28 @@
 <title>harness — ask the database, and review what it wants to change about itself</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
 <style>
+  /* The same identity as the film: an inspection record. Paper, ink, one stamp colour. */
   :root {
-    --bg: #0d0f12; --surface: #14171c; --surface-2: #191d24;
-    --hairline: #242932; --bright: #333a46;
-    --ink: #f2f4f8; --muted: #9aa3b2; --faint: #5f6875;
-    --agree: #5ec98a; --refused: #e0a44a; --regression: #e2585c;
+    --bg: #f3f3ef; --surface: #eaeae4; --surface-2: #e4e4dd;
+    --hairline: #d8d8d1; --bright: #b9bab1;
+    --ink: #17191c; --muted: #5c6058; --faint: #8a8d84;
+    --agree: #2c6046; --refused: #b8361a; --regression: #b8361a;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font-family: "IBM Plex Sans", system-ui, sans-serif; font-size: 15px; line-height: 1.5;
+    font-family: "Archivo", system-ui, sans-serif; font-size: 15px; line-height: 1.5;
   }
   a { color: var(--ink); }
   header {
     display: flex; align-items: baseline; gap: 28px; flex-wrap: wrap;
     padding: 22px 30px; border-bottom: 1px solid var(--hairline);
   }
-  .wordmark { font-weight: 600; letter-spacing: -0.01em; font-size: 17px; }
+  .wordmark { font-weight: 700; letter-spacing: -0.025em; font-size: 18px; }
   .wordmark span { color: var(--faint); font-weight: 400; }
-  .numbers { margin-left: auto; display: flex; gap: 26px; font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+  .numbers { margin-left: auto; display: flex; gap: 26px; font-family: "Courier Prime", "Courier New", monospace; font-size: 13px; }
   .numbers b { display: block; font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; }
   .numbers i { font-style: normal; color: var(--faint); text-transform: uppercase; letter-spacing: 0.14em; font-size: 11px; }
   main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(360px, 1fr); gap: 0; }
@@ -37,12 +38,12 @@
   p.lede { color: var(--muted); margin: 0 0 20px; max-width: 62ch; }
   textarea {
     width: 100%; background: var(--surface); color: var(--ink); border: 1px solid var(--hairline);
-    border-radius: 3px; padding: 13px 14px; font-family: "IBM Plex Sans", sans-serif; font-size: 15px; resize: vertical;
+    border-radius: 3px; padding: 13px 14px; font-family: "Archivo", system-ui, sans-serif; font-size: 15px; resize: vertical;
   }
   textarea:focus, button:focus-visible { outline: 1px solid var(--bright); outline-offset: 1px; }
   .row { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
   button {
-    background: var(--ink); color: #0b0d10; border: 0; border-radius: 3px; padding: 10px 16px;
+    background: var(--ink); color: var(--bg); border: 0; border-radius: 3px; padding: 10px 16px;
     font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
   }
   button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--bright); }
@@ -55,27 +56,27 @@
   }
   .chip:hover { border-color: var(--bright); color: var(--ink); }
   .card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 3px; padding: 18px; margin-top: 20px; }
-  .verdict { display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 8px; border-radius: 2px; }
+  .verdict { display: inline-block; font-family: "Courier Prime", "Courier New", monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 8px; border-radius: 2px; }
   .v-agree { color: var(--agree); border: 1px solid var(--agree); }
   .v-bad { color: var(--regression); border: 1px solid var(--regression); }
   .v-none { color: var(--faint); border: 1px solid var(--hairline); }
   pre {
     background: var(--surface-2); border: 1px solid var(--hairline); border-radius: 3px;
-    padding: 13px 14px; overflow: auto; font-family: "IBM Plex Mono", monospace; font-size: 12.5px;
+    padding: 13px 14px; overflow: auto; font-family: "Courier Prime", "Courier New", monospace; font-size: 12.5px;
     line-height: 1.55; margin: 14px 0 0; max-height: 190px;
   }
-  .meta { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; color: var(--muted); margin-top: 12px; display: flex; gap: 20px; flex-wrap: wrap; }
-  .kv { display: grid; grid-template-columns: 1fr auto; gap: 7px 16px; font-family: "IBM Plex Mono", monospace; font-size: 12.5px; margin: 14px 0 0; }
+  .meta { font-family: "Courier Prime", "Courier New", monospace; font-size: 12.5px; color: var(--muted); margin-top: 12px; display: flex; gap: 20px; flex-wrap: wrap; }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 7px 16px; font-family: "Courier Prime", "Courier New", monospace; font-size: 12.5px; margin: 14px 0 0; }
   .kv dt { color: var(--faint); }
   .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
   .edit { border-top: 1px solid var(--hairline); padding: 13px 0; display: grid; grid-template-columns: 10px 1fr; gap: 12px; }
   .dot { width: 8px; height: 8px; margin-top: 7px; }
   .dot.amber { background: var(--refused); } .dot.red { background: var(--regression); }
   .edit .why { color: var(--faint); font-size: 13px; margin-top: 3px; }
-  .edit .dec { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
-  .note { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--faint); margin-top: 10px; }
-  footer { border-top: 1px solid var(--hairline); padding: 18px 30px; color: var(--faint); font-family: "IBM Plex Mono", monospace; font-size: 12px; display: flex; gap: 22px; flex-wrap: wrap; }
-  .spinner { color: var(--faint); font-family: "IBM Plex Mono", monospace; font-size: 12.5px; }
+  .edit .dec { font-family: "Courier Prime", "Courier New", monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .note { font-family: "Courier Prime", "Courier New", monospace; font-size: 11.5px; color: var(--faint); margin-top: 10px; }
+  footer { border-top: 1px solid var(--hairline); padding: 18px 30px; color: var(--faint); font-family: "Courier Prime", "Courier New", monospace; font-size: 12px; display: flex; gap: 22px; flex-wrap: wrap; }
+  .spinner { color: var(--faint); font-family: "Courier Prime", "Courier New", monospace; font-size: 12.5px; }
 </style>
 </head>
 <body>

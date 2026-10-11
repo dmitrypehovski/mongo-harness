@@ -185,7 +185,10 @@ refuses and in what order, and which thresholds you should change for your own t
 ## The submission video
 
 The one-minute video is **generated, not screen-recorded**, and it is in this repository
-as a Remotion project (`video/`). Every figure in it is extracted from the live ledger
+as a Remotion project (`video/`). It is designed as an inspection record rather than a
+console: paper, typewriter measurements, and a vermilion stamp for every refusal, because
+the subject's own world is paperwork and a verdict. The product page in `web/` wears the
+same identity. Every figure in it is extracted from the live ledger
 by `scripts/export_video_data.py`: the current version and its rates from
 `harness.versions` and `harness.runs`, the five proposals with their before/after rates,
 p-values and verdicts from `harness.edits`, and the sixteen audit verdicts from running
