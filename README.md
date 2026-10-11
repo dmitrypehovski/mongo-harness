@@ -100,7 +100,8 @@ Everything in this repository was written on 11 October 2026, at the hackathon a
 it: the task suite, the query sandbox, the gate, the ledger, the generation loop, the
 CLI, the ruler audit that checks the sandbox against the database, the video
 composition that renders the submission film from the ledger, the scripts and the
-56 tests. No code from any earlier project was reused,
+62 tests, and the adapter that lets another harness use the gate. No code from any
+earlier project was reused,
 adapted or ported, and nothing here is presented as new that was not written today.
 
 Two things are not ours, and are credited rather than claimed:
@@ -153,6 +154,33 @@ Verified against the sandbox cluster:
 The MCP surface is intentionally **outside** the agent's loop. Handing the agent an open
 protocol that can reach every collection would make it impossible to show that it cannot
 widen its own access, which is the claim `bash demo/gate_proof.sh` exists to prove.
+
+## Use this gate in your own harness
+
+The gate is not welded to this agent. `mh/adapter.py` is a thin layer that lets a
+different harness hand over its own proposals and get back a decision it can act on:
+
+```python
+from mh.adapter import Gate
+
+verdict = Gate(MyHarness(), selection="train", verification="holdout", repeats=2).review(config)
+if verdict.accepted:
+    deploy(verdict.config)
+else:
+    log.warning("refused: %s", verdict.reason)
+```
+
+A harness provides two methods: `measure(config, split)` returning one pass/fail per case,
+and `propose(incumbent)` returning the change it wants to make to itself. Everything else
+is the gate's job.
+
+There is a runnable example with **no model, no database and no network** in
+`examples/foreign_harness.py`: a stand-in agent whose configuration is a set of enabled
+features, judged by the same gate, producing all four outcomes (promoted, refused for
+fitting the selection split, refused as worse, refused for asking to widen its own
+permissions). It is an interface demonstration, and it says so; the numbers in it describe
+nothing real. `INTEGRATION.md` covers what your harness must provide, what the gate
+refuses and in what order, and which thresholds you should change for your own task.
 
 ## The submission video
 

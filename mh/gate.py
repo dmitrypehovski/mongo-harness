@@ -65,7 +65,9 @@ def _asks_for_forbidden(rule: str) -> str:
     return ""
 
 
-def envelope_check(current: dict, candidate: dict) -> tuple[bool, str]:
+def envelope_check(
+    current: dict, candidate: dict, allowed_tools: tuple[str, ...] | None = None
+) -> tuple[bool, str]:
     """Decide whether a proposed version is even allowed to be tested.
 
     Returns ``(allowed, reason)``. The reason is written to the ledger whatever
@@ -117,7 +119,7 @@ def envelope_check(current: dict, candidate: dict) -> tuple[bool, str]:
     if len(set(tools)) != len(tools):
         return False, "the tool set repeats an entry"
     for tool in tools:
-        if tool not in ALLOWED_TOOLS:
+        if tool not in (allowed_tools or ALLOWED_TOOLS):
             return False, f"{tool} is not a tool the harness may use"
     widened = sorted(set(tools) - set(current.get("tools") or []))
     if widened:
