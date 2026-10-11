@@ -98,7 +98,8 @@ sentence explaining the decision. A promotion is undone with one command.
 
 Everything in this repository was written on 11 October 2026, at the hackathon and for
 it: the task suite, the query sandbox, the gate, the ledger, the generation loop, the
-CLI, the scripts and the 47 tests. No code from any earlier project was reused,
+CLI, the ruler audit that checks the sandbox against the database, the scripts and the
+56 tests. No code from any earlier project was reused,
 adapted or ported, and nothing here is presented as new that was not written today.
 
 Two things are not ours, and are credited rather than claimed:
@@ -175,6 +176,7 @@ bash scripts/load_mflix_local.sh
 .venv/bin/python -m mh.cli run           # measure the current version, change nothing
 .venv/bin/python -m mh.cli generation    # propose, measure, decide
 .venv/bin/python -m mh.cli edits         # the ledger
+.venv/bin/python -m mh.cli audit-ruler   # is the sandbox telling the truth?
 .venv/bin/python -m mh.cli rollback      # undo the last promotion
 .venv/bin/python -m mh.cli demo          # the scripted demonstration
 bash demo/gate_proof.sh                  # the two guards, on outcomes no model decides
@@ -207,6 +209,47 @@ have run happily. Fixing the sandbox and changing nothing else moved the same
 version from **65.6% / 80.0%** to **75.0% / 88.0%** on the two suites, and removed
 every parse failure. Most of what looks like progress in a self-improving system is
 a repair to the ruler.
+
+### The instrument check
+
+That repair was done by hand, which makes it a story rather than a mechanism. It is now
+a command. `mh.cli audit-ruler` puts eleven statements to the sandbox in both
+spellings, the sugar a model naturally writes and the strict Extended JSON that MongoDB
+equally accepts, and requires both to be accepted with identical rows. Five more probes
+go the other way and must be refused: `$where`, `$function`, `$out`, a write, an update.
+Sixteen probes, no model involved, one verdict:
+
+```
+$ .venv/bin/python -m mh.cli audit-ruler
+11 equivalence probe(s): 11 agreed, 0 diverged
+5 policy probe(s): 5 refused, 0 admitted
+
+The instrument agrees with the database on every probe. Measurements stand.
+```
+
+A detector that cannot fail is not a detector, so the audit ships with fault injection
+that switches off part of the parser:
+
+```
+$ .venv/bin/python -m mh.cli audit-ruler --inject regex
+11 equivalence probe(s): 7 agreed, 4 diverged
+
+The instrument is lying. Fix this before trusting any measurement:
+  * javascript regex literal: sugar: cannot parse argument '{"title": /the/i}' / strict: ok
+  * regex literal with escaped dot: ...
+  * regex literal on an array field: ...
+  * regex literal with a wildcard prefix: ...
+```
+
+That is precisely the hole this project spent its afternoon in, and the auditor now
+finds it in seconds. `bash demo/ruler_audit.sh` runs the three beats in sequence:
+clean, injected, clean, and fails if the injected run is not caught.
+
+Why this belongs in a harness and not in a test suite: the number the harness optimises
+against is produced by the sandbox. A system that can improve itself but cannot tell
+whether its instrument is lying will report progress it did not make, silently, in
+both directions. It is the same failure as a self-edit that looks good on the data it
+can see, one level down.
 
 One generation at temperature 0, both suites measured twice over the repeats:
 

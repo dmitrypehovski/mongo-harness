@@ -19,7 +19,7 @@ import os
 import sys
 from pathlib import Path
 
-from mh import agent, loop, scorer, store, tasks
+from mh import agent, loop, ruler, scorer, store, tasks
 
 LINE = "-" * 78
 
@@ -222,6 +222,14 @@ def command_demo(args) -> int:
     return 0
 
 
+def command_audit_ruler(args) -> int:
+    """Check the instrument itself, before believing any number it produces."""
+    db = _database()
+    outcomes, text = ruler.run(db, faults=args.inject or "")
+    print(text)
+    return 1 if ruler.defects(outcomes) else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser."""
     parser = argparse.ArgumentParser(prog="mh", description="the harness that earns its edits")
@@ -258,6 +266,15 @@ def build_parser() -> argparse.ArgumentParser:
     rollback = sub.add_parser("rollback", help="undo the last promotion")
     rollback.add_argument("--steps", type=int, default=1)
     rollback.set_defaults(func=command_rollback)
+
+    ruler_parser = sub.add_parser(
+        "audit-ruler", help="check the scoring sandbox against the database itself"
+    )
+    ruler_parser.add_argument(
+        "--inject",
+        help="fault injection for the detector: 'regex' or 'oid' disables part of the parser",
+    )
+    ruler_parser.set_defaults(func=command_audit_ruler)
     return parser
 
 

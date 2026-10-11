@@ -3,15 +3,16 @@
 The submission form asks for one minute with video **and** audio. Judges are in the
 US, so the spoken lines are in English; the notes in parentheses are for you and are
 not read out. Every command below was timed on the cluster: `status` 3.1s, `edits`
-2.5s. Nothing in this cut needs a background run.
+2.5s, `audit-ruler` about 5s. Nothing in this cut needs a background run.
 
 Before you hit record:
 
 * three terminal tabs prepared, font bumped two sizes;
 * a browser tab on Atlas, `harness` → Browse Collections → `edits`;
+* the recorded output of `bash demo/gate_proof.sh` waiting in the third tab;
 * phone on silent, no music playing in the room (they check audio playback);
 * read the English lines twice out loud so the sixty seconds fit. They come to about
-  150 words, which is a comfortable minute at demo pace.
+  125 words, which is a comfortable minute at demo pace.
 
 ---
 
@@ -23,7 +24,7 @@ On screen: the top of the README, headline visible.
 
 (Русская пометка: не начинай с объяснений. Одно предложение — и сразу экран.)
 
-## 0:07 – 0:16 · The starting point
+## 0:07 – 0:14 · The starting point
 
 On screen: terminal 1, then run
 
@@ -31,12 +32,11 @@ On screen: terminal 1, then run
 python -m mh.cli status
 ```
 
-> It starts with no rules, three tools, and answers seventy-one point nine percent of
-> the questions it can see.
+> It starts with no rules, three tools, seventy-one point nine percent.
 
 (Русская пометка: пока выполняется, ничего не говори. Три секунды паузы — нормально.)
 
-## 0:16 – 0:36 · Five proposals, five refusals
+## 0:14 – 0:33 · Five proposals, five refusals
 
 On screen: terminal 2, run
 
@@ -46,51 +46,51 @@ python -m mh.cli edits
 
 Scroll slowly through the ledger as you speak.
 
-> Five generations of proposals. All five refused. One of them bought twelve points on
-> the questions it could see, and two on the questions it could not. That is
-> overfitting, and the gate names it. Another made the harness worse: seventy-eight
-> percent down to sixty-two, with a p-value of zero point zero four.
+> Five proposals, five refusals. One bought twelve points on the questions it could see
+> and two on the questions it could not. That is overfitting, and the gate names it.
 
 (Русская пометка: вот это ядро всей минуты. Не спеши, листай журнал так, чтобы были
 видны слова `rejected_insignificant` и `rejected_regression` с причинами.)
 
-## 0:36 – 0:50 · It cannot grant itself a tool
+## 0:33 – 0:44 · It cannot grant itself a tool
 
 On screen: terminal 3, the recorded output of `bash demo/gate_proof.sh`
 (it is deterministic; showing the captured run is honest and fits the minute).
 
-> The harness cannot give itself a tool. Here it loses aggregation: eighteen point
-> eight percent. It asks for the right back and is refused. It tries a banned operator
-> instead. Refused again. Restored by hand: sixty-eight point eight.
+> The harness cannot give itself a tool. It loses aggregation, falls to eighteen point
+> eight percent, asks for the privilege back, and is refused.
 
-(Русская пометка: если хочешь показать живостью — запусти `gate_proof.sh` до записи и
-держи его вывод в третьей вкладке. Вживую он идёт минутами и в минуту не влезет.)
+(Русская пометка: вживую он идёт минутами, поэтому здесь записанный вывод.)
 
-## 0:50 – 0:58 · Where it remembers
+## 0:44 – 0:54 · It audits its own measuring instrument
 
-On screen: Atlas tab, `harness.edits`, then the terminal running
+On screen: terminal 1 again, run
 
 ```
-python /root/hack/check_vector.py
+python -m mh.cli audit-ruler
 ```
 
-> Everything it remembers lives in MongoDB. Runs, steps, lessons found by vector
-> search, and every refused edit with its reason.
+> It also audits the instrument it is measured with: the sandbox used to punish queries
+> MongoDB accepts. It catches that in seconds, and fails loudly when the instrument
+> breaks.
 
-## 0:58 – 1:00 · The close
+(Русская пометка: вот это то, чего нет ни у кого в зале. Держи на экране итоговые
+строки `11 agreed, 0 diverged` и `5 refused, 0 admitted`.)
 
-On screen: the repository URL.
+## 0:54 – 0:58 · Where it remembers, and the close
 
-> One command rolls any version back. github dot com slash dmitrypehovski slash
-> mongo-harness.
+On screen: Atlas tab on `harness.edits`, then the repository URL.
+
+> Everything it remembers lives in MongoDB, and any version rolls back with one command.
+> github dot com slash dmitrypehovski slash mongo-harness.
 
 ---
 
 ## Word count check
 
-The spoken lines are 148 words. At a calm demo pace that is 55 to 58 seconds, which
-leaves a couple of seconds of breathing room. If you run over, cut the p-value
-sentence first, then the "restored by hand" clause.
+The spoken lines are 125 words, which is 50 to 55 seconds at a calm demo pace. If you
+overrun, cut the second half of the closing line first, then "and fails loudly when the
+instrument breaks".
 
 ## The live demo, which is a different three minutes
 
@@ -101,10 +101,17 @@ answer:
 2. `mh.cli status` and `mh.cli edits` live, one minute;
 3. the trap in the table read aloud, the memorising edit and its two columns;
 4. the rights experiment, with the recorded output;
-5. Atlas open on `harness.edits`, so the memory is visible as data and not as a claim;
-6. close on the rollback.
+5. `mh.cli audit-ruler` live, and `--inject regex` if there is time: the auditor
+   catching the defect is a stronger thirty seconds than any claim about it;
+6. Atlas open on `harness.edits`, so the memory is visible as data and not as a claim;
+7. close on the rollback.
 
 The question you should expect, and the answer: *did the harness improve itself, or did
 you gate it?* The gate is part of the harness. What it cannot change is its own policy
 for accepting changes, and that is the deliberate difference between self-improvement
 and self-deception.
+
+The second question, if a judge is sharp: *how do you know your measurements mean
+anything?* That is `audit-ruler`. The honest part of the answer is that we did not know
+for most of the day: we found the sandbox refusing valid queries, and the audit is what
+that discovery turned into.

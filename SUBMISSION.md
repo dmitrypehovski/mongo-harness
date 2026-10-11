@@ -80,7 +80,14 @@ the demo to show only what was built during the event.
 > The most useful finding was not in the harness at all: the sandbox was rejecting
 > JavaScript regular expressions that mongosh accepts, so every version was being
 > punished for output the database would have run. Repairing that ruler moved the same
-> version from 65.6%/80.0% to 75.0%/88.0% without touching the harness. Every version,
+> version from 65.6%/80.0% to 75.0%/88.0% without touching the harness. That repair is
+> no longer a story, it is a command: `mh.cli audit-ruler` puts eleven statements to the
+> sandbox in both spellings, the sugar a model writes and the strict Extended JSON that
+> MongoDB equally accepts, and requires identical rows from both. Five more probes go
+> the other way and must be refused. Sixteen probes, no model involved, and a
+> fault-injection switch that proves the auditor can fail: with the historical defect
+> switched back on it reports four divergences in seconds and exits non-zero. Every
+> version,
 > run, step, proposal and refusal is in the ledger, and a promotion is undone with one
 > command. Everything in the repository was written during the event, in the
 > hackathon's Atlas sandbox cluster; the only borrowed artefacts are MongoDB's own
