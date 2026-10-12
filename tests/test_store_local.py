@@ -285,12 +285,47 @@ def test_list_edits():
 
 
 def test_vector_index_spec_shape():
-    """vector_index_spec matches the Atlas contract (384-dim cosine)."""
+    """vector_index_spec matches the Atlas contract, at the width of the model in use."""
+    from mh import embed
+
     spec = store.vector_index_spec()
     assert spec["name"] == "lessons_vec"
     assert spec["type"] == "vectorSearch"
     field = spec["definition"]["fields"][0]
     assert field["type"] == "vector"
     assert field["path"] == "embedding"
-    assert field["numDimensions"] == 384
+    assert field["numDimensions"] == embed.DIM, "the index must be built for the model in use"
     assert field["similarity"] == "cosine"
+
+
+def test_reembed_brings_a_lesson_back_into_recall():
+    """A lesson written by another model is noticed, rewritten, and comparable again."""
+    from mh import embed, reembed, tasks
+
+    db = store.get_db()
+    db["lessons"].delete_many({"task_id": "reembed-check"})
+    try:
+        store.record_lesson(
+            {
+                "task_id": "reembed-check",
+                "question": "How many rows are there in total?",
+                "embedding": [0.1] * (embed.DIM + 1),
+                "expected_digest": "expected",
+                "got_digest": "got",
+            }
+        )
+        before = reembed.plan(db, dataset_key=tasks.pack_scope())
+        assert before.mismatched >= 1, "a lesson of another width must be reported, not ignored"
+
+        _, after, written = reembed.reembed(db, dataset_key=tasks.pack_scope(), batch=4)
+        assert written >= 1
+        assert after.mismatched < before.mismatched
+
+        fixed = db["lessons"].find_one({"task_id": "reembed-check"})
+        assert len(fixed["embedding"]) == embed.DIM
+        assert fixed["embedding_model"] == embed.MODEL_NAME
+
+        hits = store.vector_search([0.1] * embed.DIM, k=10, db=db, dataset_key=tasks.pack_scope())
+        assert any(hit.get("task_id") == "reembed-check" for hit in hits), "recall must see it again"
+    finally:
+        db["lessons"].delete_many({"task_id": "reembed-check"})

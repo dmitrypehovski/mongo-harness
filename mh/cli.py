@@ -19,7 +19,7 @@ import os
 import sys
 from pathlib import Path
 
-from mh import agent, datasets, loop, ruler, scaffold, scorer, store, tasks
+from mh import agent, datasets, embed, loop, reembed, ruler, scaffold, scorer, store, tasks
 
 LINE = "-" * 78
 
@@ -98,6 +98,43 @@ def command_status(args) -> int:
         if latest:
             run = latest[0]
             print(f"last {split} run: {run['passed']}/{run['total']} = {run['rate']:.1%}")
+
+    widths = store.embedding_widths(database)
+    memory_plan = reembed.plan(database, sample_limit=0)
+    stored = widths["stored"] or {widths["configured"]: 0}
+    _banner("memory")
+    print(f"embedding model: {embed.MODEL_NAME} ({widths['configured']} numbers)")
+    print(f"lessons: {sum(stored.values())} embedded, widths {dict(sorted(stored.items()))}")
+    print(
+        f"comparable: {memory_plan.ok} of {memory_plan.total}"
+        + (
+            f" · wrong width {memory_plan.mismatched}"
+            f" · unrecorded model {memory_plan.unstamped}"
+            f" · no embedding {memory_plan.missing}"
+            if memory_plan.needed
+            else ""
+        )
+    )
+    if memory_plan.needed:
+        print(
+            f"{memory_plan.needed} lesson(s) cannot be compared as they stand: "
+            "run `python -m mh.cli reembed`"
+        )
+
+    known: dict[str, dict] = {}
+    for collection, label in (("runs", "runs"), ("lessons", "lessons")):
+        for row in database[collection].aggregate(
+            [{"$group": {"_id": {"key": "$dataset.key", "name": "$dataset.name"}, "n": {"$sum": 1}}}]
+        ):
+            identity = row.get("_id") or {}
+            entry = known.setdefault(
+                str(identity.get("key")), {"name": identity.get("name"), "runs": 0, "lessons": 0}
+            )
+            entry[label] += int(row.get("n") or 0)
+    if known:
+        print("data scopes:")
+        for key, entry in sorted(known.items(), key=lambda pair: -pair[1]["runs"]):
+            print(f"  {key}  {entry['name']}  {entry['runs']} run(s), {entry['lessons']} lesson(s)")
 
     edits = list(database.edits.find({}).sort("created_at", -1).limit(10))
     _banner("recent proposals")
@@ -266,6 +303,49 @@ def command_audit_ruler(args) -> int:
     return 1 if ruler.defects(outcomes) else 0
 
 
+def command_reembed(args) -> int:
+    """Rewrite lesson embeddings the current model cannot compare.
+
+    Changing ``MH_EMBED_MODEL`` leaves what is already stored untouched, and recall across two widths
+    is not a comparison but a silence. This reports what it finds, rewrites it, and then reads the
+    result back out of the database instead of trusting what it sent.
+
+    The lessons live in the harness's own database, not in the one the questions are asked against:
+    pointing this at the sample data would find no lessons at all and cheerfully report that
+    everything is fine.
+    """
+    db = store.get_db()
+    scope = getattr(args, "scope", None)
+    before, after, written = reembed.reembed(
+        db, dataset_key=scope, dry_run=args.dry_run, batch=args.batch
+    )
+
+    target = f"scope {scope}" if scope else "every question set"
+    print(
+        f"model {before.model} produces {before.dim} numbers · {target} · "
+        f"{before.total} lesson(s) stored"
+    )
+    print(
+        f"  missing {before.missing} · wrong width {before.mismatched} · "
+        f"unrecorded model {before.unstamped} · usable {before.ok}"
+    )
+    for sample in before.samples:
+        print(f"  needs work · {sample['task_id']} · {sample['reason']} · {sample['question']}")
+
+    if before.needed == 0:
+        print("every stored embedding can be compared with the model in use; nothing to do")
+        return 0
+    if args.dry_run:
+        print(f"would rewrite {before.needed} lesson(s); run without --dry-run to do it")
+        return 0
+
+    print(f"rewrote {written} lesson(s) with {after.model}")
+    print(f"still needing work: {after.needed} of {after.total}")
+    if after.needed:
+        return 1
+    return 0
+
+
 def command_scaffold_dataset(args) -> int:
     """Write an exam for a database nobody wrote questions for.
 
@@ -375,6 +455,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="take the equivalence probes from this pack instead of the shipped film probes",
     )
     ruler_parser.set_defaults(func=command_audit_ruler)
+
+    reembedder = sub.add_parser(
+        "reembed",
+        help="rewrite lesson embeddings after changing the embedding model",
+    )
+    reembedder.add_argument(
+        "--scope",
+        help="only the lessons of one data scope (the key `mh status` prints)",
+    )
+    reembedder.add_argument("--dry-run", action="store_true", help="say what would be rewritten")
+    reembedder.add_argument("--batch", type=int, default=32, help="how many to embed at a time")
+    reembedder.set_defaults(func=command_reembed)
 
     scaffolder = sub.add_parser(
         "scaffold-dataset",

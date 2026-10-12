@@ -39,6 +39,11 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def utc_now() -> datetime:
+    """A timezone-aware UTC timestamp, for anything writing to the ledger from outside."""
+    return _utc_now()
+
+
 def _get_client() -> MongoClient:
     """Return a process-wide MongoClient, creating it on first call."""
     global _client

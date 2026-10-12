@@ -107,13 +107,10 @@ switching datasets never mixes one dataset's answers into another's measurements
 
 Named plainly, because a product that hides its edges cannot be trusted with a measurement:
 
-- **Switching embedding models does not re-embed what is already stored.** `MH_EMBED_MODEL` and
-  `MH_EMBED_DIM` select the model, but lessons already in the database keep the width they were
-  written with, and recall cannot compare across widths. The harness warns with a count instead of
-  returning an empty result, and `store.embedding_widths()` reports the mismatch — but there is no
-  re-embed command yet. Changing the model also means re-creating the vector index; its width now
-  comes from the embedding module rather than being typed in, so `scripts/update_vector_index.py`
-  will offer to rebuild it.
+- **A vector index has to be rebuilt when the width changes.** `MH_EMBED_DIM` selects the width, and
+  the index definition now takes it from the same place rather than holding a literal, but an index
+  already built for another width refuses the vectors this code produces.
+  `scripts/update_vector_index.py` reports the difference and rebuilds it.
 
 ## What is general now, and how it is enforced
 
@@ -129,6 +126,12 @@ Named plainly, because a product that hides its edges cannot be trusted with a m
   `scripts/write_audit_probes.py --dataset <pack>` adds them to a pack that predates them. A pack
   that declares none is audited only for what the instrument refuses, and the report says so rather
   than passing film probes off as a check.
+- **Changing the embedding model is a recoverable operation, not amnesia.** `python -m mh.cli
+  reembed` reports what cannot be compared, rewrites it, and then reads the result back out of the
+  database. Equal widths are not equal models: two 384-number models live in different spaces, and
+  comparing across them returns confident nonsense rather than an error — so each vector records the
+  model that produced it, and an unrecorded vector is rewritten rather than assumed comparable.
+  `mh status` prints how many lessons are comparable and points at the command when they are not.
 - **A ledger written before any of this is repaired from evidence, not from guesswork.**
   `scripts/stamp_dataset_on_ledger.py` rewrites stamps from the task ids inside each document, leaves
   alone what it cannot decide, and marks a run it can only place by the database it executed against

@@ -223,6 +223,12 @@ Two things make this hold up on somebody else's data rather than only looking li
   sandbox against those probes. A pack with no probes is audited only for what the instrument
   refuses, and the report says so instead of passing film probes off as a check.
 
+Switching the embedding model is a recoverable operation rather than amnesia: `mh status` prints how
+many stored lessons are comparable with the model in use, and `python -m mh.cli reembed` rewrites the
+ones that are not, recording which model produced each vector — because two models of the same width
+still live in different vector spaces, and comparing across them is not an error but confident
+nonsense.
+
 Full instructions, the pack format and the edges that are still tied to this repository:
 **[DATASETS.md](DATASETS.md)**. How to publish a release: **[PUBLISHING.md](PUBLISHING.md)**.
 
