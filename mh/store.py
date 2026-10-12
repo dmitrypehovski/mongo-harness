@@ -429,6 +429,43 @@ def vector_search(
     return _vector_search_local(qv, k, database, dataset_key=dataset_key)
 
 
+def index_shape(definition: dict | None) -> dict[str, dict]:
+    """The parts of an index definition that have to agree with this code.
+
+    Width matters as much as which fields exist: an index built for a 768-number model refuses every
+    vector a 384-number model produces, and the failure looks like an empty search rather than a
+    misconfiguration.
+    """
+    shape: dict[str, dict] = {}
+    for field in (definition or {}).get("fields", []):
+        path = field.get("path")
+        if not path:
+            continue
+        if field.get("type") == "vector":
+            shape[path] = {
+                "type": "vector",
+                "numDimensions": field.get("numDimensions"),
+                "similarity": field.get("similarity"),
+            }
+        else:
+            shape[path] = {"type": field.get("type")}
+    return shape
+
+
+def index_differences(current: dict | None, wanted: dict | None) -> list[str]:
+    """Every way the index Atlas holds differs from the one this code expects."""
+    have, want = index_shape(current), index_shape(wanted)
+    problems: list[str] = []
+    for path in sorted(set(have) | set(want)):
+        if path not in have:
+            problems.append(f"{path}: missing from the index")
+        elif path not in want:
+            problems.append(f"{path}: in the index but not wanted")
+        elif have[path] != want[path]:
+            problems.append(f"{path}: index has {have[path]}, code wants {want[path]}")
+    return problems
+
+
 def vector_index_spec(name: str = "lessons_vec") -> dict:
     """Return the Atlas Vector Search index definition for ``lessons.embedding``."""
     return {

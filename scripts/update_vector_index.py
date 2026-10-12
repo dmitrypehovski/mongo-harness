@@ -42,14 +42,16 @@ def main() -> int:
         print(f"index {spec['name']} does not exist yet — run `mh init` or ensure_vector_index()")
         return 1
 
-    wanted = [field.get("path") for field in spec["definition"]["fields"]]
-    have = [field.get("path") for field in (before.get("latestDefinition") or {}).get("fields", [])]
+    current = before.get("latestDefinition") or {}
+    problems = store.index_differences(current, spec["definition"])
     print(f"index {spec['name']}: state {before.get('status')}")
-    print(f"  fields now:      {have}")
-    print(f"  fields wanted:   {wanted}")
-    if have == wanted:
+    print(f"  now:    {store.index_shape(current)}")
+    print(f"  wanted: {store.index_shape(spec['definition'])}")
+    if not problems:
         print("already in line — nothing to do")
         return 0
+    for problem in problems:
+        print(f"  differs · {problem}")
     if args.dry_run:
         print("would update the definition")
         return 0
@@ -69,10 +71,12 @@ def main() -> int:
         status = (state or {}).get("status")
         if status == "READY":
             latest = (state or {}).get("latestDefinition") or {}
-            confirmed = [f.get("path") for f in latest.get("fields", [])]
-            print(f"  READY, fields: {confirmed}")
-            print("in line" if confirmed == wanted else f"still differs: {confirmed}")
-            return 0 if confirmed == wanted else 1
+            remaining = store.index_differences(latest, spec["definition"])
+            print(f"  READY · {store.index_shape(latest)}")
+            for problem in remaining:
+                print(f"  still differs · {problem}")
+            print("in line" if not remaining else "the index still does not match")
+            return 0 if not remaining else 1
         print(f"  status {status} …")
         time.sleep(15)
     print("timed out waiting; the index may still finish on its own")
