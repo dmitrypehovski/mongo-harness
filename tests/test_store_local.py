@@ -298,6 +298,31 @@ def test_vector_index_spec_shape():
     assert field["similarity"] == "cosine"
 
 
+def test_a_new_lesson_records_which_model_embedded_it():
+    """A lesson is born verifiable: without the stamp it is indistinguishable from a stale one."""
+    from mh import embed, reembed, tasks
+
+    db = store.get_db()
+    db["lessons"].delete_many({"task_id": "model-stamp"})
+    try:
+        store.record_lesson(
+            {
+                "task_id": "model-stamp",
+                "question": "How many rows are there?",
+                "embedding": [0.2] * embed.DIM,
+                "expected_digest": "expected",
+                "got_digest": "got",
+            }
+        )
+        stored = db["lessons"].find_one({"task_id": "model-stamp"})
+        assert stored["embedding_model"] == embed.MODEL_NAME
+
+        plan = reembed.plan(db, dataset_key=tasks.pack_scope())
+        assert not [sample for sample in plan.samples if sample["task_id"] == "model-stamp"]
+    finally:
+        db["lessons"].delete_many({"task_id": "model-stamp"})
+
+
 def test_reembed_brings_a_lesson_back_into_recall():
     """A lesson written by another model is noticed, rewritten, and comparable again."""
     from mh import embed, reembed, tasks

@@ -103,6 +103,20 @@ shipped `sample_mflix` suite is used — the film questions are the reference pa
 Reference answers are cached per question set (keyed by a fingerprint of the questions), so
 switching datasets never mixes one dataset's answers into another's measurements.
 
+## How the claim is checked
+
+`scripts/stranger_journey.sh` runs the whole path in a fresh virtual environment against a database
+it creates itself (a cafe: 48 orders, 6 menu items), installing the built wheel rather than reading
+the checkout: create the environment, write the data, write the exam, compute the references,
+measure, audit the instrument from the pack's own probes, then print the ledger's memory.
+
+It is what caught the film-shaped prompt: with the shipped film description in front of it, the agent
+answered "the sample_mflix database contains no orders collection" and once produced a query over
+`movies` that returned the wrong rows. After the description was derived from the data, the same four
+questions scored 3 of 3 and 1 of 1. It also caught its own invalid run: pip skips an install when the
+version number is already present, so the script now forces the package to be replaced and refuses to
+continue if the installed copy is missing modules the wheel carries.
+
 ## What is still tied to this repository
 
 Named plainly, because a product that hides its edges cannot be trusted with a measurement:
@@ -126,6 +140,13 @@ Named plainly, because a product that hides its edges cannot be trusted with a m
   `scripts/write_audit_probes.py --dataset <pack>` adds them to a pack that predates them. A pack
   that declares none is audited only for what the instrument refuses, and the report says so rather
   than passing film probes off as a check.
+- **The prompt describes the database in front of the agent.** `mh/schema.py` reads the collections
+  the pack asks about and writes the description the agent is given: field paths (nested ones
+  included), the types actually stored, numeric ranges, and how often a field is missing. The
+  shipped film description is kept unchanged for the shipped questions, so the recorded rates stay
+  comparable; every other question set gets its own. Without this, running on unfamiliar data
+  produced answers like "the sample_mflix database contains no orders collection" and one query over
+  films that silently returned the wrong rows.
 - **Changing the embedding model is a recoverable operation, not amnesia.** `python -m mh.cli
   reembed` reports what cannot be compared, rewrites it, and then reads the result back out of the
   database. Equal widths are not equal models: two 384-number models live in different spaces, and

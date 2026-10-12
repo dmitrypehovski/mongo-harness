@@ -213,6 +213,12 @@ fields.
 
 Two things make this hold up on somebody else's data rather than only looking like it does:
 
+- **The agent is told about the data it actually has.** The shipped film description is used,
+  byte for byte, for the shipped film questions, so the rates in the record were measured with the
+  same apparatus. Any other question set gets a schema read out of its own database: the collections
+  in play, their fields, the types actually stored, ranges, and how often a field is absent. An agent
+  told about movies, pointed at a cafe, answers "there is no orders collection here" instead of
+  answering the question, which is what it did the first time this ran on data it had not seen.
 - **Memory is scoped to the data.** Every run and every lesson is stamped with the database and
   collections it measured, and recall filters on that scope inside the vector search itself. A
   question about theatres never recalls a lesson about films — and regenerating the exam over the

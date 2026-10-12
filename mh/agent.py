@@ -21,7 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from bson import json_util
 
-from mh import embed, llm, scorer
+from mh import embed, llm, schema, scorer, tasks
 from mh.tasks import TASKS
 
 log = logging.getLogger(__name__)
@@ -182,6 +182,29 @@ def _lessons_block(lessons: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def schema_text(db=None) -> str:
+    """The description of the database the agent is given.
+
+    The shipped questions keep the shipped film description, byte for byte, so the numbers already
+    in the record were measured with the same apparatus. Any other question set gets a description
+    read out of the database it is asked against: an agent told about movies, pointed at a cafe,
+    answers "there is no orders collection here" instead of answering the question, which is exactly
+    what happened the first time this ran on data it had not seen.
+    """
+    if not tasks.is_generated():
+        return SCHEMA_TEXT
+    database = tasks.pack_database()
+    collections = tasks.pack_collections()
+    fallback = f"Database: {database}\nCollections in play: {', '.join(collections)}"
+    if db is None:
+        return fallback
+    try:
+        return schema.describe(db, database, collections)
+    except Exception as exc:  # noqa: BLE001 - a description that fails must not stop the measurement
+        log.warning("could not describe %s: %s", database, exc)
+        return fallback
+
+
 def build_messages(config: dict, task: dict, lessons: list[dict], db) -> list[dict]:
     """Build the chat messages for one question under one harness version."""
     system = config.get("system_prompt", "")
@@ -194,7 +217,7 @@ def build_messages(config: dict, task: dict, lessons: list[dict], db) -> list[di
             "cases. Then output the final query as the last line of your answer, starting with db."
         )
 
-    parts = [SCHEMA_TEXT]
+    parts = [schema_text(db)]
     samples = _sample_documents(db, int(config.get("sample_docs_n") or 0))
     if samples:
         parts.append(samples)

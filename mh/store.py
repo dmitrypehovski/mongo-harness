@@ -237,6 +237,9 @@ def record_lesson(doc: dict) -> str:
     emb = payload.get("embedding")
     if emb is not None:
         payload["embedding"] = [float(x) for x in emb]
+        # which model produced it, recorded at the moment it is produced: without this every new
+        # lesson is born unverifiable, and a switch of model cannot be told from a broken one
+        payload.setdefault("embedding_model", embed.MODEL_NAME)
     if "created_at" not in payload:
         payload["created_at"] = _utc_now()
     payload.setdefault("dataset", dataset_identity())

@@ -12,7 +12,11 @@ set -uo pipefail
 
 WORK="${WORK:-/tmp/harness-stranger-journey}"
 WHEEL="${WHEEL:-}"
-rm -rf "$WORK"
+# keeping the previous exam lets a rerun start at the measurement, which is useful when the thing
+# being checked is the agent rather than the generator
+if [ "${SKIP_SCAFFOLD:-0}" != "1" ]; then
+  rm -rf "$WORK"
+fi
 mkdir -p "$WORK"
 cd "$WORK"
 
@@ -30,8 +34,21 @@ WHEEL=$(readlink -f "$WHEEL")
 echo "=== 1. a fresh environment, installed from the built wheel"
 python3 -m venv venv
 ./venv/bin/pip install -q --upgrade pip
+# dependencies with the package, then the package itself replaced unconditionally: pip skips an
+# install when the version number is already present, which once left this journey measuring an old
+# build and reporting the fix as broken
 ./venv/bin/pip install -q "${WHEEL}[memory]"
+./venv/bin/pip install -q --force-reinstall --no-deps "$WHEEL"
 ./venv/bin/pip show mongo-harness | grep -E "^(Name|Version|License)"
+./venv/bin/python -c "
+import mh, pathlib
+installed = pathlib.Path(mh.__file__).parent
+print('installed from:', installed)
+missing = [name for name in ('schema.py', 'reembed.py') if not (installed / name).exists()]
+if missing:
+    print('STALE INSTALL, missing:', missing)
+    raise SystemExit(1)
+"
 ./venv/bin/mh --help 2>&1 | head -3
 
 if ! ./venv/bin/mh scaffold-dataset --help >/dev/null 2>&1; then
@@ -80,9 +97,13 @@ PY
 [ $? -ne 0 ] && { echo "could not create the sample data"; exit 1; }
 
 echo
-echo "=== 3. the harness writes itself an exam for this database"
-./venv/bin/mh scaffold-dataset --database cafe --collections orders,menu --want 8 \
-  --out "$WORK/pack.json" --report "$WORK/report.json" 2>&1 | tail -16
+if [ "${SKIP_SCAFFOLD:-0}" = "1" ] && [ -f "$WORK/pack.json" ]; then
+  echo "=== 3. keeping the exam from the previous run"
+else
+  echo "=== 3. the harness writes itself an exam for this database"
+  ./venv/bin/mh scaffold-dataset --database cafe --collections orders,menu --want 8 \
+    --out "$WORK/pack.json" --report "$WORK/report.json" 2>&1 | tail -16
+fi
 
 echo
 echo "=== 4. what the pack contains"
