@@ -1,0 +1,20 @@
+# What ships in the source distribution, on top of the package itself.
+include LICENSE
+include README.md
+include DATASETS.md
+include INTEGRATION.md
+include SUBMISSION.md
+include requirements.txt
+include .env.example
+recursive-include mh *.html
+recursive-include tests *.py
+recursive-include examples *.py
+recursive-include scripts *.py *.sh
+recursive-include datasets *.json
+recursive-include demo *.sh *.json *.md
+
+# never: the rendered film, node modules, build output, data dumps
+prune video
+prune docs
+prune data
+global-exclude *.pyc __pycache__ *.mp4 *.archive

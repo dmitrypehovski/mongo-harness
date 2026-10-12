@@ -32,7 +32,10 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
+
+import bson
 
 from mh import datasets, llm, scorer
 
@@ -514,7 +517,102 @@ def build(
 # ------------------------------------------------------------------------- the output
 
 
-def to_pack(report: Report, name: str | None = None) -> datasets.Pack:
+def _flatten(sample: dict, prefix: str = "", depth: int = 2) -> list[tuple[str, object]]:
+    """Field paths inside a document, nested ones included.
+
+    Nested paths matter: a theatres document keeps its state three levels down, and a probe that
+    cannot reach a real string value anywhere in the document is a probe that never runs.
+    """
+    found: list[tuple[str, object]] = []
+    for name, value in sample.items():
+        path = f"{prefix}{name}"
+        if isinstance(value, dict) and depth > 0:
+            found.extend(_flatten(value, f"{path}.", depth - 1))
+        elif not isinstance(value, (dict, list)):
+            found.append((path, value))
+    return found
+
+
+def _objectid_probe(collection: str, path: str) -> dict:
+    """The sugar and canonical spellings of an object id, anchored on a real one."""
+    return {
+        "name": f"object id spelling in {collection}",
+        "why": f"{collection}.{path} holds ObjectIds: the sandbox must accept both spellings alike",
+        "anchor": {"collection": collection, "field": path, "as": "objectid"},
+        "sugar": f'db.{collection}.find({{"{path}": ObjectId("{{{{value}}}}")}}, {{"{path}": 1}}).limit(2)',
+        "canonical": f'db.{collection}.find({{"{path}": {{"$oid": "{{{{value}}}}"}}}}, {{"{path}": 1}}).limit(2)',
+    }
+
+
+def _date_probe(collection: str, path: str) -> dict:
+    """The two spellings of a date, anchored on a date that is in the data."""
+    return {
+        "name": f"date spelling in {collection}",
+        "why": f"{collection}.{path} holds dates: both spellings must select the same rows",
+        "anchor": {"collection": collection, "field": path, "as": "date"},
+        "sugar": f'db.{collection}.find({{"{path}": ISODate("{{{{value}}}}")}}, {{"{path}": 1}}).limit(2)',
+        "canonical": f'db.{collection}.find({{"{path}": {{"$date": "{{{{value}}}}"}}}}, {{"{path}": 1}}).limit(2)',
+    }
+
+
+def _equality_probe(collection: str, path: str) -> dict:
+    """A plain value against an explicit ``$eq``, anchored on a value that exists."""
+    return {
+        "name": f"equality in {collection}",
+        "why": f"a plain value and an explicit $eq must select the same rows in {collection}",
+        "anchor": {"collection": collection, "field": path, "as": "string"},
+        "sugar": f'db.{collection}.find({{"{path}": "{{{{value}}}}"}}, {{"{path}": 1}}).limit(2)',
+        "canonical": f'db.{collection}.find({{"{path}": {{"$eq": "{{{{value}}}}"}}}}, {{"{path}": 1}}).limit(2)',
+    }
+
+
+def audit_probes_for(db, collections: list[str]) -> list[dict]:
+    """Declare instrument checks for a database, from what is actually in it.
+
+    Nothing here is specific to any dataset: a collection holding an ObjectId gets the spelling
+    probe, one holding a date gets the date probe, and one holding a string gets the equality probe.
+    Every value a probe compares is read out of the database, so the probe checks the sandbox rather
+    than a value typed in once and forgotten.
+    """
+    specs: list[dict] = []
+
+    def already(kind: str) -> bool:
+        return any(spec.get("anchor", {}).get("as") == kind for spec in specs)
+
+    def already_equality(collection: str) -> bool:
+        return any(spec.get("name") == f"equality in {collection}" for spec in specs)
+
+    for collection in collections:
+        try:
+            sample = db[collection].find_one({})
+        except Exception as exc:  # noqa: BLE001 - an unreadable collection is skipped, not fatal
+            log.warning("cannot sample %s for audit probes: %s", collection, exc)
+            continue
+        if not sample:
+            continue
+
+        fields = _flatten(sample)
+        if not already("objectid"):
+            for path, value in fields:
+                if isinstance(value, bson.ObjectId):
+                    specs.append(_objectid_probe(collection, path))
+                    break
+        if not already("date"):
+            for path, value in fields:
+                if isinstance(value, datetime):
+                    specs.append(_date_probe(collection, path))
+                    break
+        if not already_equality(collection) and not any(
+            spec.get("name", "").startswith("equality in") for spec in specs
+        ):
+            for path, value in fields:
+                if isinstance(value, str) and value:
+                    specs.append(_equality_probe(collection, path))
+                    break
+    return specs
+
+
+def to_pack(report: Report, name: str | None = None, audit_probes: list[dict] | None = None) -> datasets.Pack:
     """Turn a report into a dataset pack, ready for the harness to run on."""
     tasks = []
     for candidate in report.kept:
@@ -528,14 +626,17 @@ def to_pack(report: Report, name: str | None = None) -> datasets.Pack:
                 "reference": candidate.reference,
             }
         )
+    collections = sorted({task["collection"] for task in tasks if task.get("collection")})
     return datasets.Pack(
         name=name or report.database,
         tasks=tasks,
         database=report.database,
         description=f"generated from {report.database} and verified against it",
+        audit_probes=list(audit_probes or []),
     )
 
 
-def write_pack(report: Report, path: str | Path) -> Path:
-    """Write the verified questions out as a dataset pack."""
-    return datasets.write(to_pack(report), path)
+def write_pack(report: Report, path: str | Path, db=None) -> Path:
+    """Write the verified questions out as a dataset pack, with an audit for its own data."""
+    probes = audit_probes_for(db, to_pack(report).summary()["collections"]) if db is not None else []
+    return datasets.write(to_pack(report, audit_probes=probes), path)

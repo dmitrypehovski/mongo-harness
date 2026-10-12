@@ -103,14 +103,34 @@ shipped `sample_mflix` suite is used — the film questions are the reference pa
 Reference answers are cached per question set (keyed by a fingerprint of the questions), so
 switching datasets never mixes one dataset's answers into another's measurements.
 
-## What is not general yet
+## What is still tied to this repository
 
 Named plainly, because a product that hides its edges cannot be trusted with a measurement:
 
-- **Lessons are per-dataset in principle, film-flavoured in practice.** The agent's memory of past
-  mistakes is keyed by question family and was written while working on `sample_mflix`. On a new
-  dataset the agent starts without anything useful to recall.
-- **The instrument audit is written against `sample_mflix`.** `mh.cli audit-ruler` probes the scoring
-  sandbox with pairs of queries over the film collections. A pack can carry its own probes in an
-  `audit_probes` field, but the runner does not consume them yet.
-- **The embedder is fixed** (`BAAI/bge-small-en-v1.5` via fastembed) and is used for lesson recall.
+- **Switching embedding models does not re-embed what is already stored.** `MH_EMBED_MODEL` and
+  `MH_EMBED_DIM` select the model, but lessons already in the database keep the width they were
+  written with, and recall cannot compare across widths. The harness warns with a count instead of
+  returning an empty result, and `store.embedding_widths()` reports the mismatch — but there is no
+  re-embed command yet. Changing the model also means re-creating the vector index; its width now
+  comes from the embedding module rather than being typed in, so `scripts/update_vector_index.py`
+  will offer to rebuild it.
+
+## What is general now, and how it is enforced
+
+- **Memory is scoped to the data, not to the questions.** Every run and every lesson is stamped with
+  the scope of what it measured: the database plus the collections its questions touch
+  (`tasks.pack_scope()`). Recall filters on that scope inside the `$vectorSearch` stage itself, so a
+  new question never recalls a lesson about another collection — and regenerating an exam over the
+  same data keeps everything learned about it. The exact question wording is recorded separately as
+  `pack`, for provenance only.
+- **The instrument audit travels with the pack.** `mh.cli audit-ruler --dataset <pack>` builds its
+  equivalence probes from the pack's `audit_probes`, anchored in values read out of that data now.
+  `scaffold-dataset` writes those probes when it writes the exam, and
+  `scripts/write_audit_probes.py --dataset <pack>` adds them to a pack that predates them. A pack
+  that declares none is audited only for what the instrument refuses, and the report says so rather
+  than passing film probes off as a check.
+- **A ledger written before any of this is repaired from evidence, not from guesswork.**
+  `scripts/stamp_dataset_on_ledger.py` rewrites stamps from the task ids inside each document, leaves
+  alone what it cannot decide, and marks a run it can only place by the database it executed against
+  as approximate. On this repository's own database it rewrote 172 documents and left none
+  undecided.

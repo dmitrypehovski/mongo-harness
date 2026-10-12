@@ -50,7 +50,7 @@ def apply_dataset(args) -> None:
     if not path:
         return
     pack = datasets.load(path)
-    tasks.use_pack(pack.tasks)
+    tasks.use_pack(pack.tasks, database=pack.database, name=pack.name)
     loop.reset_dataset_caches()
     if pack.database:
         os.environ["MH_MFLIX_DB"] = pack.database
@@ -245,9 +245,23 @@ def command_demo(args) -> int:
 
 
 def command_audit_ruler(args) -> int:
-    """Check the instrument itself, before believing any number it produces."""
+    """Check the instrument itself, before believing any number it produces.
+
+    With ``--dataset`` the equivalence probes come from that pack instead of from the films this
+    repository ships with. A pack that declares none is audited only for what the instrument
+    refuses — running film probes against somebody else's data would be a check of nothing.
+    """
     db = _database()
-    outcomes, text = ruler.run(db, faults=args.inject or "")
+    probes = None
+    if getattr(args, "dataset", None):
+        pack = datasets.load(args.dataset)
+        probes, problems = ruler.probes_from_spec(pack.audit_probes, db)
+        print(f"probes from {args.dataset}: {len(probes)} usable, {len(problems)} not")
+        for problem in problems:
+            print(f"  skipped · {problem}")
+        if not pack.audit_probes:
+            print("  the pack declares no probes; auditing only what the instrument refuses")
+    outcomes, text = ruler.run(db, faults=args.inject or "", probes=probes)
     print(text)
     return 1 if ruler.defects(outcomes) else 0
 
@@ -272,7 +286,7 @@ def command_scaffold_dataset(args) -> int:
         print("nothing survived verification, so no pack was written")
         return 1
 
-    path = scaffold.write_pack(report, args.out)
+    path = scaffold.write_pack(report, args.out, db=db)
     print(f"wrote {path}")
 
     if args.report:
@@ -355,6 +369,10 @@ def build_parser() -> argparse.ArgumentParser:
     ruler_parser.add_argument(
         "--inject",
         help="fault injection for the detector: 'regex' or 'oid' disables part of the parser",
+    )
+    ruler_parser.add_argument(
+        "--dataset",
+        help="take the equivalence probes from this pack instead of the shipped film probes",
     )
     ruler_parser.set_defaults(func=command_audit_ruler)
 

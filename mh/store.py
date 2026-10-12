@@ -9,15 +9,24 @@ from __future__ import annotations
 import logging
 import math
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Optional, Protocol
 
 from pymongo import ASCENDING, MongoClient
 from pymongo.database import Database
 from pymongo.errors import OperationFailure, PyMongoError
 
-from mh import config
+from mh import config, embed
 
 logger = logging.getLogger(__name__)
+
+
+class LessonSource(Protocol):
+    """What the local recall actually needs of a database: ``database["lessons"].find(query)``.
+
+    Narrowing the parameter to this is what lets the scoping be tested without a server.
+    """
+
+    def __getitem__(self, name: str) -> Any: ...
 
 _COLLECTIONS = ("runs", "steps", "lessons", "versions", "edits", "fetches")
 
@@ -126,6 +135,25 @@ def _insert_one(collection_name: str, doc: dict, db: Optional[Database] = None) 
     return str(result.inserted_id)
 
 
+def dataset_identity() -> dict:
+    """Which data, and which questions, the active harness is working on.
+
+    ``key`` is the scope of the data — what recall and past results are filtered by. ``pack`` is the
+    fingerprint of the exact question wording, kept for provenance only: it changes whenever an exam
+    is regenerated, and memory should survive that.
+    """
+    from mh import tasks
+
+    return {
+        "key": tasks.pack_scope(),
+        "pack": tasks.pack_key(),
+        "questions": len(tasks.TASKS),
+        "name": tasks.pack_name(),
+        "collections": tasks.pack_collections(),
+        "generated": tasks.is_generated(),
+    }
+
+
 def dataset_query(extra: dict | None = None) -> dict:
     """A query for runs belonging to the question set that is active right now.
 
@@ -147,13 +175,8 @@ def record_run(doc: dict) -> str:
     Every run is stamped with a fingerprint of the question set it measured, so a run can never
     be read as a measurement of some other exam.
     """
-    from mh import tasks
-
     payload = dict(doc)
-    payload.setdefault(
-        "dataset",
-        {"key": tasks.pack_key(), "questions": len(tasks.TASKS), "name": tasks.pack_name()},
-    )
+    payload.setdefault("dataset", dataset_identity())
     if "started_at" not in payload:
         payload["started_at"] = _utc_now()
     return _insert_one("runs", payload)
@@ -191,6 +214,9 @@ def record_edit(doc: dict) -> str:
 def record_lesson(doc: dict) -> str:
     """Insert a lesson document with embedding; return inserted id as str.
 
+    Stamped with the question set it was learned on, like every run: a lesson about one dataset's
+    fields is not advice for another's.
+
     Accepts either ``expected``/``got`` or ``expected_digest``/``got_digest``.
     ``embedding`` must be a plain list of floats (stored as-is).
     """
@@ -208,6 +234,7 @@ def record_lesson(doc: dict) -> str:
         payload["embedding"] = [float(x) for x in emb]
     if "created_at" not in payload:
         payload["created_at"] = _utc_now()
+    payload.setdefault("dataset", dataset_identity())
     return _insert_one("lessons", payload)
 
 
@@ -269,20 +296,89 @@ def _cosine(a: list[float], b: list[float]) -> float:
 def _vector_search_local(
     query_vector: list[float],
     k: int,
-    database: Database,
+    database: LessonSource,
+    dataset_key: str | None = None,
 ) -> list[dict]:
-    """In-process cosine ranking over ``lessons`` with an ``embedding`` field."""
+    """In-process cosine ranking over ``lessons`` with an ``embedding`` field.
+
+    ``dataset_key`` keeps the recall inside one question set. Without it a new dataset recalls
+    memories of another one: the lesson "watch the year field" means nothing about theatres, and a
+    harness whose memory is film-shaped is not usable on someone else's data.
+    """
+    query: dict = {"embedding": {"$exists": True, "$ne": []}}
+    if dataset_key:
+        query["dataset.key"] = dataset_key
     scored: list[tuple[float, dict]] = []
-    for doc in database["lessons"].find({"embedding": {"$exists": True, "$ne": []}}):
+    mismatched = 0
+    for doc in database["lessons"].find(query):
         emb = doc.get("embedding")
         if not isinstance(emb, list) or not emb:
+            continue
+        if len(emb) != len(query_vector):
+            # a lesson embedded by another model cannot be compared, and cosine would silently
+            # score it zero — a recall that looks empty rather than broken
+            mismatched += 1
             continue
         score = _cosine(query_vector, [float(x) for x in emb])
         item = dict(doc)
         item["score"] = score
         scored.append((score, item))
+    if mismatched:
+        log.warning(
+            "%d lesson(s) have embeddings of another width than the model in use (MH_EMBED_DIM=%d); "
+            "they are not being recalled — re-embed them or point the harness back at the old model",
+            mismatched,
+            len(query_vector),
+        )
     scored.sort(key=lambda pair: pair[0], reverse=True)
     return [item for _, item in scored[:k]]
+
+
+def embedding_widths(db: Optional[Database] = None) -> dict:
+    """How wide the stored embeddings are, against the width the code is configured for.
+
+    Switching embedding models does not rewrite what is already stored, and a mismatch makes recall
+    quietly empty instead of loudly wrong. This is what a caller checks before believing an empty
+    result is an answer.
+    """
+    database = db if db is not None else get_db()
+    widths: dict[int, int] = {}
+    for doc in database["lessons"].find({"embedding": {"$exists": True}}):
+        embedding = doc.get("embedding")
+        if isinstance(embedding, list) and embedding:
+            widths[len(embedding)] = widths.get(len(embedding), 0) + 1
+    configured = embed.DIM
+    return {
+        "configured": configured,
+        "stored": widths,
+        "mismatched": sum(count for width, count in widths.items() if width != configured),
+        "all_agree": all(width == configured for width in widths),
+    }
+
+
+def vector_search_stage(
+    query_vector: list[float],
+    k: int,
+    index_name: str = "lessons_vec",
+    dataset_key: str | None = None,
+) -> dict:
+    """The `$vectorSearch` stage, filter included.
+
+    The filter has to be expressed inside the search stage rather than in a following ``$match``:
+    a filter after the stage would rank lessons from another dataset and then throw them away,
+    leaves fewer hits than the caller asked for. Filtering there also requires the field to be
+    declared in the index, which ``vector_index_spec`` does.
+    """
+    stage: dict = {
+        "index": index_name,
+        "path": "embedding",
+        "queryVector": query_vector,
+        "numCandidates": max(k * 10, 50),
+        "limit": k,
+    }
+    if dataset_key:
+        stage["filter"] = {"dataset.key": dataset_key}
+    return stage
 
 
 def _try_atlas_vector_search(
@@ -290,18 +386,12 @@ def _try_atlas_vector_search(
     k: int,
     database: Database,
     index_name: str = "lessons_vec",
+    dataset_key: str | None = None,
 ) -> list[dict] | None:
     """Run `$vectorSearch` if available; return None on any failure."""
+    stage = vector_search_stage(query_vector, k, index_name, dataset_key)
     pipeline = [
-        {
-            "$vectorSearch": {
-                "index": index_name,
-                "path": "embedding",
-                "queryVector": query_vector,
-                "numCandidates": max(k * 10, 50),
-                "limit": k,
-            }
-        },
+        {"$vectorSearch": stage},
         {"$addFields": {"score": {"$meta": "vectorSearchScore"}}},
     ]
     try:
@@ -315,21 +405,23 @@ def vector_search(
     query_vector: list[float],
     k: int = 5,
     db: Optional[Database] = None,
+    dataset_key: str | None = None,
 ) -> list[dict]:
     """Return up to ``k`` lessons sorted by similarity desc, each with a ``score`` key.
 
     Uses Atlas `$vectorSearch` when `MH_USE_VECTOR` is enabled and the deployment
-    supports it; otherwise falls back to in-process cosine similarity.
+    supports it; otherwise falls back to in-process cosine similarity. ``dataset_key`` restricts
+    recall to one question set.
     """
     database = db if db is not None else get_db()
     qv = [float(x) for x in query_vector]
 
     if config.use_vector() and config.uri_kind() == "atlas":
-        atlas_hits = _try_atlas_vector_search(qv, k, database)
+        atlas_hits = _try_atlas_vector_search(qv, k, database, dataset_key=dataset_key)
         if atlas_hits is not None:
             return atlas_hits
 
-    return _vector_search_local(qv, k, database)
+    return _vector_search_local(qv, k, database, dataset_key=dataset_key)
 
 
 def vector_index_spec(name: str = "lessons_vec") -> dict:
@@ -342,9 +434,14 @@ def vector_index_spec(name: str = "lessons_vec") -> dict:
                 {
                     "type": "vector",
                     "path": "embedding",
-                    "numDimensions": 384,
+                    # taken from the embedding module, not typed in: an index built for another
+                    # model's width silently refuses every vector this code produces
+                    "numDimensions": embed.DIM,
                     "similarity": "cosine",
-                }
+                },
+                # declared so $vectorSearch may filter on it: a lesson learned on one question set
+                # must not be ranked into another set's recall
+                {"type": "filter", "path": "dataset.key"},
             ]
         },
     }

@@ -115,6 +115,17 @@ def validate(pack: Pack) -> list[str]:
     for split in SPLITS:
         if not any(task.get("split") == split for task in pack.tasks):
             problems.append(f"nothing is assigned to the {split} split; the gate needs both")
+
+    for index, spec in enumerate(pack.audit_probes):
+        where = f"audit probe {index + 1}"
+        if spec.get("name"):
+            where = f"audit probe {spec['name']}"
+        for key in ("name", "sugar", "canonical"):
+            if not spec.get(key):
+                problems.append(f"{where}: missing {key}")
+        anchor = spec.get("anchor") or {}
+        if anchor and not (anchor.get("collection") and anchor.get("field")):
+            problems.append(f"{where}: an anchor needs a collection and a field")
     return problems
 
 

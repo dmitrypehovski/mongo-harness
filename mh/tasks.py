@@ -638,28 +638,73 @@ TASKS: list[dict] = [
 #: The suite as it ships, kept so the built-in questions can be restored.
 _BUILTIN: list[dict] = list(TASKS)
 
+#: What the shipped suite asks about, when no pack has supplied questions.
+_BUILTIN_DATABASE = "sample_mflix"
 
-def use_pack(pack_tasks: list[dict]) -> None:
+#: Where the active questions came from, when a pack supplied them rather than the shipped suite.
+_PACK_SOURCE: dict | None = None
+
+
+def use_pack(
+    pack_tasks: list[dict],
+    database: str | None = None,
+    name: str | None = None,
+) -> None:
     """Point the harness at another dataset's questions.
 
     The shipped list is mutated in place rather than rebound, so the modules that imported
-    ``TASKS`` see the change without being re-imported.
+    ``TASKS`` see the change without being re-imported. The database the questions are asked
+    against travels with them, because the scope of the harness's memory is derived from it.
     """
+    global _PACK_SOURCE
     TASKS[:] = list(pack_tasks)
+    _PACK_SOURCE = {"database": database, "name": name}
 
 
 def reset_pack() -> None:
     """Go back to the questions this repository ships with."""
+    global _PACK_SOURCE
     TASKS[:] = list(_BUILTIN)
+    _PACK_SOURCE = None
+
+
+def is_generated() -> bool:
+    """True when the active questions came from a pack rather than the shipped suite."""
+    return _PACK_SOURCE is not None
 
 
 def pack_name() -> str:
     """What to call the active question set in the record."""
+    if _PACK_SOURCE and _PACK_SOURCE.get("name"):
+        return str(_PACK_SOURCE["name"])
     return "sample_mflix" if TASKS == _BUILTIN else "generated"
 
 
+def pack_database() -> str:
+    """The database these questions are asked against."""
+    if _PACK_SOURCE and _PACK_SOURCE.get("database"):
+        return str(_PACK_SOURCE["database"])
+    return _BUILTIN_DATABASE
+
+
+def pack_collections() -> list[str]:
+    """The collections the active questions touch."""
+    return sorted({str(task["collection"]) for task in TASKS if task.get("collection")})
+
+
+def pack_scope() -> str:
+    """Which data the active questions are about.
+
+    The harness's memory is scoped to this rather than to the questions' wording: regenerating an
+    exam over the same data keeps everything learned about it, while the same questions pointed at
+    other collections inherit nothing. Scoping by wording would do the opposite of both.
+    """
+    payload = f"{pack_database()}|{','.join(pack_collections())}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+
+
 def pack_key() -> str:
-    """A short fingerprint of the active questions, used to key caches."""
+    """A short fingerprint of the active questions, used to key caches and record provenance."""
     payload = "|".join(f"{task.get('id')}:{task.get('reference')}" for task in TASKS)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
 

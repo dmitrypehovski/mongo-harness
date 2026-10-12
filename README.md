@@ -211,7 +211,20 @@ cluster): 14 questions proposed, 7 kept, 7 refused with the reason printed — 3
 names the question never asked for, 2 references returning whole documents when the question named
 fields.
 
-Full instructions, the pack format and the edges that are not general yet: **[DATASETS.md](DATASETS.md)**.
+Two things make this hold up on somebody else's data rather than only looking like it does:
+
+- **Memory is scoped to the data.** Every run and every lesson is stamped with the database and
+  collections it measured, and recall filters on that scope inside the vector search itself. A
+  question about theatres never recalls a lesson about films — and regenerating the exam over the
+  same data keeps everything learned about it, which scoping by question wording would throw away.
+- **The audit of the instrument travels with the pack.** `scaffold-dataset` writes an
+  `audit_probes` block derived from the collections it just examined, anchoring each probe on a real
+  value in that data, and `python -m mh.cli audit-ruler --dataset datasets/shop.json` runs the
+  sandbox against those probes. A pack with no probes is audited only for what the instrument
+  refuses, and the report says so instead of passing film probes off as a check.
+
+Full instructions, the pack format and the edges that are still tied to this repository:
+**[DATASETS.md](DATASETS.md)**. How to publish a release: **[PUBLISHING.md](PUBLISHING.md)**.
 
 ## Use this gate in your own harness
 

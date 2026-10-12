@@ -277,11 +277,90 @@ def _run_text(db, text: str) -> tuple[scorer.Execution | None, str]:
     return scorer.execute(db, mql), ""
 
 
-def audit(db) -> list[Outcome]:
-    """Run every probe against a live database and report what the instrument did."""
+def _value_at(doc: dict, path: str):
+    """Follow a dotted path inside a document, the way MongoDB addresses a nested field."""
+    current = doc
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return None
+        current = current[part]
+    return current
+
+
+def _render(value, as_kind: str) -> str:
+    """Turn a real value into the text a query template should carry."""
+    if as_kind == "objectid":
+        return str(value)
+    if as_kind == "date":
+        if hasattr(value, "strftime"):
+            return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return str(value)
+    if as_kind == "number":
+        return repr(value)
+    return str(value)
+
+
+def probe_from_spec(spec: dict, db) -> tuple[Probe | None, str]:
+    """Build one probe from a pack's declaration, or say why it cannot be built.
+
+    A probe anchored in the data — ``{"anchor": {"collection": …, "field": …, "as": "objectid"}}`` —
+    takes a value that exists right now and fills ``{{value}}`` with it. Anchoring is why an audit
+    written for one database still means something on another: it checks the instrument, not the
+    films.
+    """
+    name = str(spec.get("name") or "").strip()
+    sugar = str(spec.get("sugar") or "")
+    canonical = str(spec.get("canonical") or "")
+    if not name:
+        return None, "a probe needs a name"
+    if not sugar or not canonical:
+        return None, f"{name}: needs both a sugar and a canonical query"
+
+    anchor = spec.get("anchor") or {}
+    if anchor:
+        collection = anchor.get("collection")
+        field = anchor.get("field")
+        if not collection or not field:
+            return None, f"{name}: an anchor needs a collection and a field"
+        try:
+            row = db[collection].find_one({field: {"$exists": True}}, {field: 1})
+        except Exception as exc:  # noqa: BLE001 - a probe that cannot be built is reported, not raised
+            return None, f"{name}: cannot read {collection}.{field}: {exc}"
+        anchored = _value_at(row, field) if row else None
+        if anchored is None:
+            return None, f"{name}: no value in {collection}.{field} to anchor on"
+        value = _render(anchored, str(anchor.get("as") or "string"))
+        sugar = sugar.replace("{{value}}", value)
+        canonical = canonical.replace("{{value}}", value)
+        for text in (sugar, canonical):
+            if "{{" in text:
+                return None, f"{name}: a place to fill was left empty"
+    return Probe(name=name, kind="equivalence", note=str(spec.get("why") or ""),
+                 sugar=sugar, canonical=canonical), ""
+
+
+def probes_from_spec(specs: list[dict], db) -> tuple[list[Probe], list[str]]:
+    """Every probe a pack declares that can actually be built, plus the reasons for the rest."""
+    probes: list[Probe] = []
+    problems: list[str] = []
+    for spec in specs or []:
+        probe, problem = probe_from_spec(spec, db)
+        if probe is None:
+            problems.append(problem)
+        else:
+            probes.append(probe)
+    return probes, problems
+
+
+def audit(db, probes: list[Probe] | None = None) -> list[Outcome]:
+    """Run every probe against a live database and report what the instrument did.
+
+    ``probes`` replaces the equivalence probes this file ships with; the policy probes — the ones
+    that check what the instrument refuses — always run, because they say nothing about a dataset.
+    """
     outcomes: list[Outcome] = []
 
-    for probe in EQUIVALENCE_PROBES:
+    for probe in (probes if probes is not None else EQUIVALENCE_PROBES):
         sugar, canonical = probe.texts(db)
         left, left_error = _run_text(db, sugar)
         right, right_error = _run_text(db, canonical)
@@ -324,7 +403,7 @@ def defects(outcomes: list[Outcome]) -> list[Outcome]:
 
 def report(outcomes: list[Outcome]) -> str:
     """Render the audit as a table a human can read in a hurry."""
-    width = max(len(o.probe.name) for o in outcomes)
+    width = max((len(o.probe.name) for o in outcomes), default=10)
     lines = [LINE, "ruler audit: does the sandbox accept what MongoDB accepts?", LINE]
     for outcome in outcomes:
         mark = "ok  " if outcome.verdict in ("agrees", "refused") else "FAIL"
@@ -333,6 +412,11 @@ def report(outcomes: list[Outcome]) -> str:
     equivalence = [o for o in outcomes if o.probe.kind == "equivalence"]
     policy = [o for o in outcomes if o.probe.kind == "policy"]
     lines.append(LINE)
+    if not equivalence:
+        lines.append(
+            "no equivalence probes: this question set declares none, so only what the instrument "
+            "refuses has been checked"
+        )
     lines.append(
         f"{len(equivalence)} equivalence probe(s): "
         f"{len([o for o in equivalence if o.verdict == 'agrees'])} agreed, "
@@ -357,11 +441,16 @@ def report(outcomes: list[Outcome]) -> str:
     return "\n".join(lines)
 
 
-def run(db, faults: str = "") -> tuple[list[Outcome], str]:
-    """Inject the requested faults, audit, and return the outcomes and the report."""
+def run(db, faults: str = "", probes: list[Probe] | None = None) -> tuple[list[Outcome], str]:
+    """Inject the requested faults, audit, and return the outcomes and the report.
+
+    ``probes`` are an equivalence set belonging to a particular question set. Pass an empty list to
+    audit only what the instrument refuses, which is the honest thing to do for data whose probes
+    nobody has written yet.
+    """
     for kind in [part.strip() for part in faults.split(",") if part.strip()]:
         inject_fault(kind)
-    outcomes = audit(db)
+    outcomes = audit(db, probes)
     return outcomes, report(outcomes)
 
 

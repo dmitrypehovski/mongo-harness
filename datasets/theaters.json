@@ -91,5 +91,29 @@
       "question": "How many theaters have a theater ID of 1200 or higher?",
       "reference": "db.theaters.countDocuments({ \"theaterId\": { \"$gte\": 1200 } })"
     }
+  ],
+  "audit_probes": [
+    {
+      "name": "object id spelling in theaters",
+      "why": "theaters._id holds ObjectIds: the sandbox must accept both spellings alike",
+      "anchor": {
+        "collection": "theaters",
+        "field": "_id",
+        "as": "objectid"
+      },
+      "sugar": "db.theaters.find({\"_id\": ObjectId(\"{{value}}\")}, {\"_id\": 1}).limit(2)",
+      "canonical": "db.theaters.find({\"_id\": {\"$oid\": \"{{value}}\"}}, {\"_id\": 1}).limit(2)"
+    },
+    {
+      "name": "equality in theaters",
+      "why": "a plain value and an explicit $eq must select the same rows in theaters",
+      "anchor": {
+        "collection": "theaters",
+        "field": "location.address.street1",
+        "as": "string"
+      },
+      "sugar": "db.theaters.find({\"location.address.street1\": \"{{value}}\"}, {\"location.address.street1\": 1}).limit(2)",
+      "canonical": "db.theaters.find({\"location.address.street1\": {\"$eq\": \"{{value}}\"}}, {\"location.address.street1\": 1}).limit(2)"
+    }
   ]
 }

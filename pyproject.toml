@@ -10,9 +10,17 @@ readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Dmitry Pekhovski" }]
 license = { text = "Apache-2.0" }
+keywords = ["evaluation", "self-improvement", "agents", "mongodb", "benchmark", "statistics"]
 classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
   "Topic :: Database",
   "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]

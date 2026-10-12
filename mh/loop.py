@@ -135,7 +135,7 @@ def lessons_for(task: dict, config: dict, db) -> list[dict]:
         return []
     try:
         vector = agent.embed.embed_one(task["question"])
-        return store.vector_search(vector, k=count)
+        return store.vector_search(vector, k=count, dataset_key=tasks.pack_scope())
     except Exception as exc:
         log.warning("memory retrieval failed: %s", exc)
         return []
